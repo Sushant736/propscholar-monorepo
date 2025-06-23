@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { User, IUserDocument } from "../models/User.js";
+import { User, IUserDocument, ICartItem } from "../models/User.js";
 import { JWTService } from "../utils/jwt.js";
 import { EmailService } from "../services/emailService.js";
 import { logger } from "../utils/logger.js";
 import { AuthenticatedRequest } from "../middleware/auth.js";
 
-export class AuthController {
+export class UserController {
   public static async signup(req: Request, res: Response): Promise<void> {
     try {
       const { name, email, phone } = req.body;
@@ -68,7 +68,7 @@ export class AuthController {
     }
   }
 
-  public static async login(req: Request, res: Response): Promise<void> {
+  public static async signin(req: Request, res: Response): Promise<void> {
     try {
       const { email, otp } = req.body;
 
@@ -160,72 +160,7 @@ export class AuthController {
         },
       });
     } catch (error) {
-      logger.error("Login error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async verifyOTP(req: Request, res: Response): Promise<void> {
-    try {
-      const { email, otp } = req.body;
-
-      const user = await User.findOne({ email }).select("+otpCode +otpExpires");
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-
-      if (!user.otpCode || !user.otpExpires || user.otpExpires < new Date()) {
-        res.status(400).json({
-          success: false,
-          message: "OTP has expired. Please request a new one.",
-        });
-        return;
-      }
-
-      if (user.otpCode !== otp) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid OTP",
-        });
-        return;
-      }
-
-      // Clear OTP and generate tokens
-      user.otpCode = undefined;
-      user.otpExpires = undefined;
-
-      const tokens = JWTService.generateTokens({
-        userId: (user._id as any).toString(),
-        email: user.email,
-      });
-
-      user.refreshTokens.push(tokens.refreshToken);
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "OTP verified successfully",
-        data: {
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            isEmailVerified: user.isEmailVerified,
-          },
-          tokens,
-        },
-      });
-    } catch (error) {
-      logger.error("OTP verification error:", error);
+      logger.error("Signin error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -247,16 +182,14 @@ export class AuthController {
         return;
       }
 
+      // Generate new OTP
       const otpCode = user.generateOTP();
       await user.save();
 
+      // Send OTP email
       try {
         const html = EmailService.getOTPTemplate(user.name, otpCode);
-        await EmailService.sendEmail(
-          email,
-          "Your Login Verification Code",
-          html
-        );
+        await EmailService.sendEmail(email, "Your Verification Code", html);
 
         res.status(200).json({
           success: true,
@@ -278,236 +211,45 @@ export class AuthController {
     }
   }
 
-  public static async verifyEmail(req: Request, res: Response): Promise<void> {
-    try {
-      const { token } = req.body;
-
-      const user = await User.findOne({
-        emailVerificationToken: token,
-        emailVerificationExpires: { $gt: new Date() },
-      });
-
-      if (!user) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid or expired verification token",
-        });
-        return;
-      }
-
-      user.isEmailVerified = true;
-      user.emailVerificationToken = undefined;
-      user.emailVerificationExpires = undefined;
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Email verified successfully",
-      });
-    } catch (error) {
-      logger.error("Email verification error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async forgotPassword(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { email } = req.body;
-
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        // Don't reveal if email exists or not
-        res.status(200).json({
-          success: true,
-          message: "If the email exists, a password reset link has been sent",
-        });
-        return;
-      }
-
-      // Generate OTP for password reset
-      const otpCode = user.generateOTP();
-      await user.save();
-
-      try {
-        const html = EmailService.getOTPTemplate(user.name, otpCode);
-        await EmailService.sendEmail(email, "Password Reset Code", html);
-
-        res.status(200).json({
-          success: true,
-          message: "If the email exists, a password reset code has been sent",
-        });
-      } catch (emailError) {
-        logger.error("Failed to send password reset email:", emailError);
-        res.status(500).json({
-          success: false,
-          message: "Failed to send password reset email. Please try again.",
-        });
-      }
-    } catch (error) {
-      logger.error("Forgot password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async resetPassword(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { token } = req.body;
-
-      const user = await User.findOne({
-        otpCode: token,
-        otpExpires: { $gt: new Date() },
-      });
-
-      if (!user) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid or expired reset token",
-        });
-        return;
-      }
-
-      // Clear OTP
-      user.otpCode = undefined;
-      user.otpExpires = undefined;
-      // Clear all refresh tokens for security
-      user.refreshTokens = [];
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Password reset successfully",
-      });
-    } catch (error) {
-      logger.error("Reset password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async changePassword(
+  public static async updateProfile(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
-      const { currentPassword, newPassword } = req.body;
+      const { name, phone } = req.body;
+      const userId = req.user?.userId;
 
-      res.status(400).json({
-        success: false,
-        message: "Password change not supported in OTP-based authentication",
-      });
-    } catch (error) {
-      logger.error("Change password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
+      const user = await User.findById(userId);
 
-  public static async refreshToken(req: Request, res: Response): Promise<void> {
-    try {
-      const { refreshToken } = req.body;
-
-      const decoded = JWTService.verifyRefreshToken(refreshToken);
-
-      const user = await User.findById(decoded.userId).select("+refreshTokens");
-
-      if (!user || !user.refreshTokens.includes(refreshToken)) {
-        res.status(401).json({
+      if (!user) {
+        res.status(404).json({
           success: false,
-          message: "Invalid refresh token",
+          message: "User not found",
         });
         return;
       }
 
-      // Generate new tokens
-      const tokens = JWTService.generateTokens({
-        userId: (user._id as any).toString(),
-        email: user.email,
-      });
+      // Update fields
+      if (name) user.name = name;
+      if (phone) user.phone = phone;
 
-      // Remove old refresh token and add new one
-      user.refreshTokens = user.refreshTokens.filter(
-        (token) => token !== refreshToken
-      );
-      user.refreshTokens.push(tokens.refreshToken);
       await user.save();
 
       res.status(200).json({
         success: true,
-        message: "Tokens refreshed successfully",
-        data: { tokens },
+        message: "Profile updated successfully",
+        data: {
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            isEmailVerified: user.isEmailVerified,
+          },
+        },
       });
     } catch (error) {
-      logger.error("Refresh token error:", error);
-      res.status(401).json({
-        success: false,
-        message: "Invalid refresh token",
-      });
-    }
-  }
-
-  public static async logout(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { refreshToken } = req.body;
-      const userId = req.user?._id;
-
-      if (refreshToken) {
-        const user = await User.findById(userId).select("+refreshTokens");
-        if (user) {
-          user.refreshTokens = user.refreshTokens.filter(
-            (token) => token !== refreshToken
-          );
-          await user.save();
-        }
-      }
-
-      res.status(200).json({
-        success: true,
-        message: "Logged out successfully",
-      });
-    } catch (error) {
-      logger.error("Logout error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async logoutAll(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
-    try {
-      const userId = req.user?._id;
-
-      await User.findByIdAndUpdate(userId, { refreshTokens: [] });
-
-      res.status(200).json({
-        success: true,
-        message: "Logged out from all devices successfully",
-      });
-    } catch (error) {
-      logger.error("Logout all error:", error);
+      logger.error("Update profile error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -520,14 +262,272 @@ export class AuthController {
     res: Response
   ): Promise<void> {
     try {
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
       res.status(200).json({
         success: true,
         data: {
-          user: req.user,
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            isEmailVerified: user.isEmailVerified,
+          },
         },
       });
     } catch (error) {
       logger.error("Get profile error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  public static async getCart(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId)
+        .populate({
+          path: "cart.product",
+          select: "name images",
+        })
+        .populate({
+          path: "cart.variant",
+          select: "name price sku",
+        });
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          cart: user.cart,
+        },
+      });
+    } catch (error) {
+      logger.error("Get cart error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  public static async addToCart(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { productId, variantId, quantity } = req.body;
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      // Check if item already exists in cart
+      const existingItemIndex = user.cart.findIndex(
+        (item) =>
+          item.product.toString() === productId &&
+          item.variant.toString() === variantId
+      );
+
+      if (existingItemIndex > -1) {
+        // Update quantity
+        user.cart[existingItemIndex].quantity += quantity;
+      } else {
+        // Add new item
+        user.cart.push({
+          product: productId,
+          variant: variantId,
+          quantity,
+        });
+      }
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Item added to cart successfully",
+        data: {
+          cart: user.cart,
+        },
+      });
+    } catch (error) {
+      logger.error("Add to cart error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  public static async updateCartItem(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { productId, variantId, quantity } = req.body;
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      const itemIndex = user.cart.findIndex(
+        (item) =>
+          item.product.toString() === productId &&
+          item.variant.toString() === variantId
+      );
+
+      if (itemIndex === -1) {
+        res.status(404).json({
+          success: false,
+          message: "Item not found in cart",
+        });
+        return;
+      }
+
+      if (quantity <= 0) {
+        // Remove item if quantity is 0 or negative
+        user.cart.splice(itemIndex, 1);
+      } else {
+        // Update quantity
+        user.cart[itemIndex].quantity = quantity;
+      }
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Cart updated successfully",
+        data: {
+          cart: user.cart,
+        },
+      });
+    } catch (error) {
+      logger.error("Update cart error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  public static async removeFromCart(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { productId, variantId } = req.body;
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      const itemIndex = user.cart.findIndex(
+        (item) =>
+          item.product.toString() === productId &&
+          item.variant.toString() === variantId
+      );
+
+      if (itemIndex === -1) {
+        res.status(404).json({
+          success: false,
+          message: "Item not found in cart",
+        });
+        return;
+      }
+
+      user.cart.splice(itemIndex, 1);
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Item removed from cart successfully",
+        data: {
+          cart: user.cart,
+        },
+      });
+    } catch (error) {
+      logger.error("Remove from cart error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  public static async clearCart(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      user.cart = [];
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Cart cleared successfully",
+        data: {
+          cart: user.cart,
+        },
+      });
+    } catch (error) {
+      logger.error("Clear cart error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",

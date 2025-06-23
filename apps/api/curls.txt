@@ -1,0 +1,451 @@
+# PropScholar Ecommerce API - Curl Commands
+# Base URL: http://localhost:3000/api
+
+# ========================================
+# AUTHENTICATION ROUTES
+# ========================================
+
+# Sign Up (OTP will be sent to email)
+curl -X POST http://localhost:3000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+1234567890"
+  }'
+
+# Login (Step 1: Request OTP)
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com"
+  }'
+
+# Login (Step 2: Submit OTP)
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "otp": "123456"
+  }'
+
+# Verify OTP (Alternative to login with OTP)
+curl -X POST http://localhost:3000/api/auth/verify-otp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "otp": "123456"
+  }'
+
+# Request OTP (For existing users)
+curl -X POST http://localhost:3000/api/auth/request-otp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com"
+  }'
+
+# Verify Email (If email verification is implemented)
+curl -X POST http://localhost:3000/api/auth/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "email_verification_token_here"
+  }'
+
+# Forgot Password (Sends OTP)
+curl -X POST http://localhost:3000/api/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com"
+  }'
+
+# Reset Password (Using OTP)
+curl -X POST http://localhost:3000/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "otp_code_here"
+  }'
+
+# Refresh Token
+curl -X POST http://localhost:3000/api/auth/refresh-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "your_refresh_token_here"
+  }'
+
+# Get Profile (Protected)
+curl -X GET http://localhost:3000/api/auth/profile \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Logout (Protected)
+curl -X POST http://localhost:3000/api/auth/logout \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "refreshToken": "your_refresh_token_here"
+  }'
+
+# Logout All (Protected)
+curl -X POST http://localhost:3000/api/auth/logout-all \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# ========================================
+# USER ROUTES
+# ========================================
+
+# User Sign Up (No validation middleware)
+curl -X POST http://localhost:3000/api/users/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "phone": "+1987654321"
+  }'
+
+# User Sign In (No validation middleware)
+curl -X POST http://localhost:3000/api/users/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane@example.com",
+    "otp": "123456"
+  }'
+
+# Request OTP (No validation middleware)
+curl -X POST http://localhost:3000/api/users/request-otp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jane@example.com"
+  }'
+
+# Get Profile (Protected)
+curl -X GET http://localhost:3000/api/users/profile \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Update Profile (Protected)
+curl -X PUT http://localhost:3000/api/users/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "name": "Jane Updated",
+    "phone": "+1122334455"
+  }'
+
+# ========================================
+# CART ROUTES (Protected)
+# ========================================
+
+# Get Cart
+curl -X GET http://localhost:3000/api/users/cart \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Add to Cart
+curl -X POST http://localhost:3000/api/users/cart/add \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "product": "507f1f77bcf86cd799439011",
+    "variant": "507f1f77bcf86cd799439012",
+    "quantity": 2
+  }'
+
+# Update Cart Item
+curl -X PUT http://localhost:3000/api/users/cart/update \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "product": "507f1f77bcf86cd799439011",
+    "variant": "507f1f77bcf86cd799439012",
+    "quantity": 3
+  }'
+
+# Remove from Cart
+curl -X DELETE http://localhost:3000/api/users/cart/remove \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "product": "507f1f77bcf86cd799439011",
+    "variant": "507f1f77bcf86cd799439012"
+  }'
+
+# Clear Cart
+curl -X DELETE http://localhost:3000/api/users/cart/clear \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# ========================================
+# CATEGORY ROUTES
+# ========================================
+
+# Get All Categories
+curl -X GET "http://localhost:3000/api/categories?page=1&limit=10&isActive=true"
+
+# Get Category by ID
+curl -X GET http://localhost:3000/api/categories/507f1f77bcf86cd799439013
+
+# Create Category
+curl -X POST http://localhost:3000/api/categories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Electronics",
+    "description": "Electronic devices and gadgets",
+    "image": "https://example.com/electronics.jpg"
+  }'
+
+# Update Category
+curl -X PUT http://localhost:3000/api/categories/507f1f77bcf86cd799439013 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Electronics Updated",
+    "description": "Updated description for electronics",
+    "image": "https://example.com/electronics-updated.jpg",
+    "isActive": true
+  }'
+
+# Toggle Category Active Status
+curl -X PATCH http://localhost:3000/api/categories/507f1f77bcf86cd799439013/toggle-active
+
+# Delete Category
+curl -X DELETE http://localhost:3000/api/categories/507f1f77bcf86cd799439013
+
+# ========================================
+# PRODUCT ROUTES
+# ========================================
+
+# Get All Products
+curl -X GET "http://localhost:3000/api/products?page=1&limit=10&category=507f1f77bcf86cd799439013&isActive=true&isFeatured=false&search=phone&sortBy=name&sortOrder=asc"
+
+# Get Product by ID
+curl -X GET http://localhost:3000/api/products/507f1f77bcf86cd799439014
+
+# Create Product
+curl -X POST http://localhost:3000/api/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "iPhone 15 Pro",
+    "description": "Latest iPhone with advanced features",
+    "images": [
+      "https://example.com/iphone1.jpg",
+      "https://example.com/iphone2.jpg"
+    ],
+    "category": "507f1f77bcf86cd799439013",
+    "tags": ["smartphone", "apple", "5g"],
+    "isActive": true,
+    "isFeatured": true,
+    "seoDescription": "Buy iPhone 15 Pro - Best smartphone with advanced features",
+    "seoKeywords": ["iphone", "smartphone", "apple", "5g"]
+  }'
+
+# Update Product
+curl -X PUT http://localhost:3000/api/products/507f1f77bcf86cd799439014 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "iPhone 15 Pro Max",
+    "description": "Updated description for iPhone 15 Pro Max",
+    "images": [
+      "https://example.com/iphone1-updated.jpg",
+      "https://example.com/iphone2-updated.jpg"
+    ],
+    "category": "507f1f77bcf86cd799439013",
+    "tags": ["smartphone", "apple", "5g", "pro"],
+    "isActive": true,
+    "isFeatured": true,
+    "seoDescription": "Buy iPhone 15 Pro Max - Premium smartphone experience",
+    "seoKeywords": ["iphone", "smartphone", "apple", "5g", "pro", "max"]
+  }'
+
+# Toggle Product Active Status
+curl -X PATCH http://localhost:3000/api/products/507f1f77bcf86cd799439014/toggle-active
+
+# Toggle Product Featured Status
+curl -X PATCH http://localhost:3000/api/products/507f1f77bcf86cd799439014/toggle-featured
+
+# Delete Product
+curl -X DELETE http://localhost:3000/api/products/507f1f77bcf86cd799439014
+
+# ========================================
+# VARIANT ROUTES
+# ========================================
+
+# Get All Variants
+curl -X GET "http://localhost:3000/api/variants?page=1&limit=10&product=507f1f77bcf86cd799439014&isActive=true&sortBy=name&sortOrder=asc"
+
+# Get Variant by ID
+curl -X GET http://localhost:3000/api/variants/507f1f77bcf86cd799439015
+
+# Create Variant
+curl -X POST http://localhost:3000/api/variants \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "iPhone 15 Pro - 128GB - Natural Titanium",
+    "comparePrice": 1099.99,
+    "costPrice": 800.00,
+    "isActive": true,
+    "product": "507f1f77bcf86cd799439014"
+  }'
+
+# Update Variant
+curl -X PUT http://localhost:3000/api/variants/507f1f77bcf86cd799439015 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "iPhone 15 Pro - 256GB - Natural Titanium",
+    "comparePrice": 1199.99,
+    "costPrice": 900.00,
+    "isActive": true,
+    "product": "507f1f77bcf86cd799439014"
+  }'
+
+# Toggle Variant Active Status
+curl -X PATCH http://localhost:3000/api/variants/507f1f77bcf86cd799439015/toggle-active
+
+# Update Variant Stock
+curl -X PATCH http://localhost:3000/api/variants/507f1f77bcf86cd799439015/stock \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stock": 25
+  }'
+
+# Delete Variant
+curl -X DELETE http://localhost:3000/api/variants/507f1f77bcf86cd799439015
+
+# ========================================
+# ORDER ROUTES (Protected)
+# ========================================
+
+# Get All Orders
+curl -X GET "http://localhost:3000/api/orders?page=1&limit=10&status=pending&paymentStatus=paid&sortBy=createdAt&sortOrder=desc" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Get Order Stats
+curl -X GET http://localhost:3000/api/orders/stats \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Get Order by ID
+curl -X GET http://localhost:3000/api/orders/507f1f77bcf86cd799439016 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Create Order
+curl -X POST http://localhost:3000/api/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{
+    "items": [
+      {
+        "product": "507f1f77bcf86cd799439011",
+        "variant": "507f1f77bcf86cd799439012",
+        "quantity": 1,
+        "price": 999.99,
+        "totalPrice": 999.99
+      }
+    ],
+    "subtotal": 999.99,
+    "tax": 89.99,
+    "shippingCost": 10.00,
+    "discount": 0,
+    "total": 1099.98,
+    "paymentMethod": "credit_card",
+    "shippingAddress": {
+      "name": "John Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "state": "NY",
+      "country": "USA",
+      "zipCode": "10001"
+    },
+    "billingAddress": {
+      "name": "John Doe",
+      "phone": "+1234567890",
+      "address": "123 Main St",
+      "city": "New York",
+      "state": "NY",
+      "country": "USA",
+      "zipCode": "10001"
+    },
+    "notes": "Please deliver in the morning"
+  }'
+
+# Cancel Order
+curl -X PATCH http://localhost:3000/api/orders/507f1f77bcf86cd799439016/cancel \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Update Order Status (Admin)
+curl -X PATCH http://localhost:3000/api/orders/507f1f77bcf86cd799439016/status \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "shipped",
+    "paymentStatus": "paid",
+    "trackingNumber": "TRK123456789",
+    "trackingUrl": "https://tracking.example.com/TRK123456789",
+    "estimatedDelivery": "2024-01-15T10:00:00Z"
+  }'
+
+# ========================================
+# HEALTH CHECK
+# ========================================
+
+# Health Check
+curl -X GET http://localhost:3000/api/health
+
+# API Info
+curl -X GET http://localhost:3000/api/
+
+# ========================================
+# AUTHENTICATION FLOW EXAMPLE
+# ========================================
+
+# 1. Sign up a new user
+# curl -X POST http://localhost:3000/api/auth/signup \
+#   -H "Content-Type: application/json" \
+#   -d '{"name": "Test User", "email": "test@example.com", "phone": "+1234567890"}'
+
+# 2. Request OTP for login
+# curl -X POST http://localhost:3000/api/auth/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"email": "test@example.com"}'
+
+# 3. Login with OTP (you'll receive tokens)
+# curl -X POST http://localhost:3000/api/auth/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"email": "test@example.com", "otp": "123456"}'
+
+# 4. Use the access token for protected routes
+# curl -X GET http://localhost:3000/api/auth/profile \
+#   -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE"
+
+# ========================================
+# NOTES
+# ========================================
+
+# IMPORTANT: This API uses OTP-based authentication - no passwords required
+# 
+# AUTHENTICATION FLOW:
+# 1. Signup: Send name, email, phone → OTP sent to email
+# 2. Login: Send email → OTP sent to email → Send email + OTP → Receive tokens
+# 3. Use access token for all protected routes
+# 
+# FIELD REQUIREMENTS:
+# - Phone field is optional in signup
+# - OTP must be 6 digits
+# - Email must be valid format
+# - Name must be 2-50 characters, letters and spaces only
+# 
+# MODEL STRUCTURE:
+# - User: name, email, phone(optional), isEmailVerified, cart, etc.
+# - Variant: name, comparePrice, costPrice, isActive, product (NO price, stock, sku, etc.)
+# - Product: name, description, images, category, tags, isActive, isFeatured, etc.
+# - Order: requires items with product, variant, quantity, price, totalPrice
+# 
+# REPLACE PLACEHOLDERS:
+# - YOUR_ACCESS_TOKEN: JWT token from login response
+# - ObjectId values (507f1f77bcf86cd799439011, etc.): Actual IDs from your database
+# - OTP codes: Actual 6-digit codes sent to email
+# 
+# FORMAT REQUIREMENTS:
+# - Dates: ISO 8601 format (2024-01-15T10:00:00Z)
+# - Phone: Include country code (+1234567890)
+# - Prices: Decimal format (999.99)
+# - Images: Valid URLs
+# 
+# VALIDATION:
+# - Auth routes use validation middleware
+# - User routes do NOT use validation middleware
+# - Category/Product/Variant routes use general rate limiting
+# - Order routes require authentication 
