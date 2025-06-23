@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 export interface IUserDocument extends Document {
   name: string;
@@ -124,7 +125,6 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 userSchema.methods.generateEmailVerificationToken = function(): string {
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
   
   this.emailVerificationToken = token;
@@ -134,7 +134,6 @@ userSchema.methods.generateEmailVerificationToken = function(): string {
 };
 
 userSchema.methods.generatePasswordResetToken = function(): string {
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
   
   this.passwordResetToken = token;
