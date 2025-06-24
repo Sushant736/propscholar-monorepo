@@ -1,10 +1,9 @@
 import { PropScholarNavbar } from "@/components/PropScholarNavbar";
 import { HeroSection } from "@/components/HeroSection";
-import { PropScholarGeminiWrapper } from "@/components/PropScholarGeminiWrapper";
+import { GoogleGeminiEffectDemo } from "@/components/PropScholarGeminiWrapper";
 import { PlatformShowcase } from "@/components/PlatformShowcase";
 import { EvaluationRules } from "@/components/EvaluationRules";
 import { DiscordCommunity } from "@/components/DiscordCommunity";
-import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
@@ -13,7 +12,7 @@ export default function Home() {
       <HeroSection />
       
       {/* New sections below hero */}
-      <PropScholarGeminiWrapper />
+      <GoogleGeminiEffectDemo />
       <PlatformShowcase />
       <EvaluationRules />
       <DiscordCommunity />

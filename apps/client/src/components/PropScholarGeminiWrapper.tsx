@@ -1,31 +1,39 @@
 "use client";
+import { useScroll, useTransform } from "motion/react";
+import React from "react";
+import { GoogleGeminiEffect } from "./ui/google-gemini-effect";
 
-import React, { useRef } from "react";
-import { useScroll, useTransform, MotionValue } from "framer-motion";
-import { PropScholarGeminiEffect } from "./PropScholarGeminiEffect";
-
-export const PropScholarGeminiWrapper = ({ className }: { className?: string }) => {
-  const targetRef = useRef<HTMLDivElement>(null);
+export function GoogleGeminiEffectDemo() {
+  const ref = React.useRef(null);
   const { scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ["start end", "end start"],
+    target: ref,
+    offset: ["start start", "end start"],
   });
 
-  // Create path length animations with different speeds for variety
-  const pathLengths: MotionValue<number>[] = [
-    useTransform(scrollYProgress, [0, 0.6], [0, 1]),
-    useTransform(scrollYProgress, [0.1, 0.7], [0, 1]),
-    useTransform(scrollYProgress, [0.2, 0.8], [0, 1]),
-    useTransform(scrollYProgress, [0.3, 0.9], [0, 1]),
-    useTransform(scrollYProgress, [0.4, 1], [0, 1]),
-  ];
+  const pathLengthFirst = useTransform(scrollYProgress, [0, 0.8], [0.2, 1.2]);
+  const pathLengthSecond = useTransform(scrollYProgress, [0, 0.8], [0.15, 1.2]);
+  const pathLengthThird = useTransform(scrollYProgress, [0, 0.8], [0.1, 1.2]);
+  const pathLengthFourth = useTransform(scrollYProgress, [0, 0.8], [0.05, 1.2]);
+  const pathLengthFifth = useTransform(scrollYProgress, [0, 0.8], [0, 1.2]);
 
   return (
-    <div ref={targetRef} className="relative">
-      <PropScholarGeminiEffect 
-        pathLengths={pathLengths}
-        className={className}
+    <div
+      className="h-[400vh] bg-prop-scholar-deep-navy w-full dark:border dark:border-white/[0.1] rounded-md relative pt-40 pb-72 overflow-clip"
+      ref={ref}
+    >
+      <GoogleGeminiEffect
+        pathLengths={[
+          pathLengthFirst,
+          pathLengthSecond,
+          pathLengthThird,
+          pathLengthFourth,
+          pathLengthFifth,
+        ]}
+        title="Get started with PropScholar"
+        description="Want big capital to trade? But that big capital requires high fees?"
+       
+       buttonText="PropScholar.com"
       />
     </div>
   );
-}; 
+}
