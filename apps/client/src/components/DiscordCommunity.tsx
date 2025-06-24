@@ -258,7 +258,7 @@ export const DiscordCommunity = ({ className }: { className?: string }) => {
             className="text-center mb-16"
           >
             <h3 className="text-3xl md:text-4xl font-bold text-prop-scholar-main-text mb-4">
-              What You'll Get Inside
+              What You&apos;ll Get Inside
             </h3>
             <p className="text-prop-scholar-secondary-text text-lg">
               Exclusive benefits for PropScholar Discord members

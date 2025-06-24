@@ -28,11 +28,12 @@ export const PropScholarNavbar = () => {
   const router = useRouter();
 
   const navItems = [
-    { name: "Home", link: "/" },
-    { name: "Platforms", link: "/platforms" },
-    { name: "Education", link: "/education" },
-    { name: "Community", link: "/community" },
-    { name: "About", link: "/about" },
+    { name: "Home", href: "/" },
+    { name: "Platforms", href: "/platforms" },
+    { name: "Shop", href: "/shop" },
+    { name: "Education", href: "/education" },
+    { name: "Community", href: "/community" },
+    { name: "About", href: "/about" },
   ];
 
   const handleItemClick = () => {
@@ -55,7 +56,7 @@ export const PropScholarNavbar = () => {
         {/* Desktop Navigation */}
         <NavBody>
           <NavbarLogo />
-          <NavItems items={navItems} onItemClick={handleItemClick} />
+          <NavItems items={navItems.map(item => ({ name: item.name, link: item.href }))} onItemClick={handleItemClick} />
           
           <div className="flex items-center gap-4">
             {/* Cart Button */}
@@ -158,7 +159,7 @@ export const PropScholarNavbar = () => {
             {navItems.map((item, idx) => (
               <a
                 key={idx}
-                href={item.link}
+                href={item.href}
                 onClick={handleItemClick}
                 className="block w-full text-left px-4 py-3 text-prop-scholar-main-text hover:text-prop-scholar-electric-blue hover:bg-prop-scholar-electric-blue/10 rounded-xl transition-colors"
               >

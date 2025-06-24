@@ -10,7 +10,6 @@ import {
 
 import React, { useRef, useState } from "react";
 
-
 interface NavbarProps {
   children: React.ReactNode;
   className?: string;
@@ -28,7 +27,7 @@ interface NavItemsProps {
     link: string;
   }[];
   className?: string;
-  onItemClick?: () => void;
+  onItemClick?: (link: string) => void; // Updated to pass the link
 }
 
 interface MobileNavProps {
@@ -58,11 +57,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
   const [visible, setVisible] = useState<boolean>(false);
 
   useMotionValueEvent(scrollY, "change", (latest: number) => {
-    if (latest > 100) {
-      setVisible(true);
-    } else {
-      setVisible(false);
-    }
+    setVisible(latest > 100);
   });
 
   return (
@@ -128,7 +123,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
       {items.map((item, idx) => (
         <a
           onMouseEnter={() => setHovered(idx)}
-          onClick={onItemClick}
+          onClick={() => onItemClick?.(item.link)} // Updated to pass the link
           className="relative px-4 py-2 text-prop-scholar-secondary-text hover:text-prop-scholar-main-text transition-colors duration-200"
           key={`link-${idx}`}
           href={item.link}
@@ -203,7 +198,6 @@ export const MobileNavMenu = ({
   children,
   className,
   isOpen,
-  onClose,
 }: MobileNavMenuProps) => {
   return (
     <AnimatePresence>
@@ -272,21 +266,18 @@ export const NavbarLogo = () => {
 
 export const NavbarButton = ({
   href,
-  as: Tag = "a",
+  as: Component = "a",
   children,
   className,
   variant = "primary",
   ...props
 }: {
   href?: string;
-  as?: React.ElementType;
+  as?: "a" | "button" | React.ComponentType<any>;
   children: React.ReactNode;
   className?: string;
   variant?: "primary" | "secondary" | "accent" | "gradient";
-} & (
-  | React.ComponentPropsWithoutRef<"a">
-  | React.ComponentPropsWithoutRef<"button">
-)) => {
+} & React.HTMLAttributes<HTMLElement>) => {
   const baseStyles =
     "px-6 py-2.5 rounded-xl font-semibold text-sm relative cursor-pointer transition-all duration-200 inline-block text-center border";
 
@@ -301,13 +292,15 @@ export const NavbarButton = ({
       "bg-primary-gradient hover:opacity-90 text-white border-transparent shadow-[0_0_25px_rgba(36,107,253,0.4)] hover:shadow-[0_0_35px_rgba(36,107,253,0.6)] hover:-translate-y-0.5",
   };
 
+  const componentProps = {
+    ...(href && { href }),
+    className: cn(baseStyles, variantStyles[variant], className),
+    ...props,
+  };
+
   return (
-    <Tag
-      href={href || undefined}
-      className={cn(baseStyles, variantStyles[variant], className)}
-      {...props}
-    >
+    <Component {...componentProps}>
       {children}
-    </Tag>
+    </Component>
   );
 };
