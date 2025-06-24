@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { X, Mail, ArrowRight, ArrowLeft, Check } from "lucide-react";
 
@@ -300,7 +299,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   </form>
 
                   <p className="text-sm text-prop-scholar-secondary-text mt-4">
-                    Didn't receive the code?{" "}
+                    Didn&apos;t receive the code?{" "}
                     <button className="text-prop-scholar-electric-blue hover:text-prop-scholar-royal-blue transition-colors font-medium">
                       Resend
                     </button>
@@ -420,7 +419,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
                   <div className="mt-6 pt-6 border-t border-prop-scholar-secondary-text/20">
                     <p className="text-sm text-prop-scholar-secondary-text">
-                      Don't have an account?{" "}
+                      Don&apos;t have an account?{" "}
                       <button
                         onClick={switchToSignup}
                         className="text-prop-scholar-electric-blue hover:text-prop-scholar-royal-blue transition-colors font-medium"

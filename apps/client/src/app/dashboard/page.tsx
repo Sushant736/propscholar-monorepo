@@ -78,7 +78,7 @@ export default function DashboardPage() {
               Welcome back, {user.name.split(' ')[0]}! 👋
             </h1>
             <p className="text-prop-scholar-secondary-text text-lg">
-              Here's your trading performance overview
+              Here&apos;s your trading performance overview
             </p>
           </div>
 

@@ -110,7 +110,7 @@ export function HeroSection() {
           variants={fadeInUp}
           className="text-xl md:text-2xl text-prop-scholar-secondary-text max-w-4xl mx-auto mb-12 leading-relaxed"
         >
-          Pass our comprehensive evaluations and we'll cover the difference. 
+          Pass our comprehensive evaluations and we&apos;ll cover the difference. 
           <br className="hidden md:block" />
           <span className="text-prop-scholar-electric-blue font-semibold">
             Transform your trading career with proven strategies and reduced costs.
