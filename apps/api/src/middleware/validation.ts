@@ -43,6 +43,13 @@ export const signupValidation = [
     .withMessage("Please provide a valid phone number"),
 ];
 
+export const emailValidation = [
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Please provide a valid email address"),
+];
+
 export const loginValidation = [
   body("email")
     .isEmail()
@@ -60,6 +67,14 @@ export const otpValidation = [
     .isLength({ min: 6, max: 6 })
     .isNumeric()
     .withMessage("OTP must be a 6-digit number"),
+
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Name must be between 2 and 50 characters")
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage("Name can only contain letters and spaces"),
 ];
 
 export const forgotPasswordValidation = [

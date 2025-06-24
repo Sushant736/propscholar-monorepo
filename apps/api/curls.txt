@@ -5,31 +5,14 @@
 # AUTHENTICATION ROUTES
 # ========================================
 
-# Sign Up (OTP will be sent to email)
-curl -X POST http://localhost:3000/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+1234567890"
-  }'
-
-# Login (Step 1: Request OTP)
-curl -X POST http://localhost:3000/api/auth/login \
+# Send OTP (Always sends OTP regardless of user existence)
+curl -X POST http://localhost:3000/api/auth/send-otp \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john@example.com"
   }'
 
-# Login (Step 2: Submit OTP)
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com",
-    "otp": "123456"
-  }'
-
-# Verify OTP (Alternative to login with OTP)
+# Verify OTP (For existing users - just email and OTP)
 curl -X POST http://localhost:3000/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
@@ -37,32 +20,13 @@ curl -X POST http://localhost:3000/api/auth/verify-otp \
     "otp": "123456"
   }'
 
-# Request OTP (For existing users)
-curl -X POST http://localhost:3000/api/auth/request-otp \
+# Verify OTP (For new users - email, OTP, and name)
+curl -X POST http://localhost:3000/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@example.com"
-  }'
-
-# Verify Email (If email verification is implemented)
-curl -X POST http://localhost:3000/api/auth/verify-email \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "email_verification_token_here"
-  }'
-
-# Forgot Password (Sends OTP)
-curl -X POST http://localhost:3000/api/auth/forgot-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "john@example.com"
-  }'
-
-# Reset Password (Using OTP)
-curl -X POST http://localhost:3000/api/auth/reset-password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "otp_code_here"
+    "email": "john@example.com",
+    "otp": "123456",
+    "name": "John Doe"
   }'
 
 # Refresh Token
@@ -388,23 +352,25 @@ curl -X GET http://localhost:3000/api/health
 curl -X GET http://localhost:3000/api/
 
 # ========================================
-# AUTHENTICATION FLOW EXAMPLE
+# FRONTEND AUTH FLOW EXAMPLE
 # ========================================
 
-# 1. Sign up a new user
-# curl -X POST http://localhost:3000/api/auth/signup \
-#   -H "Content-Type: application/json" \
-#   -d '{"name": "Test User", "email": "test@example.com", "phone": "+1234567890"}'
-
-# 2. Request OTP for login
-# curl -X POST http://localhost:3000/api/auth/login \
+# 1. User enters email → Always send OTP
+# curl -X POST http://localhost:3000/api/auth/send-otp \
 #   -H "Content-Type: application/json" \
 #   -d '{"email": "test@example.com"}'
 
-# 3. Login with OTP (you'll receive tokens)
-# curl -X POST http://localhost:3000/api/auth/login \
+# 2. User enters OTP → Check if user exists and handle accordingly
+# curl -X POST http://localhost:3000/api/auth/verify-otp \
 #   -H "Content-Type: application/json" \
 #   -d '{"email": "test@example.com", "otp": "123456"}'
+
+# 3a. If existing user → Returns tokens directly
+# 3b. If new user → Returns error with requiresSignup: true
+#    → Frontend asks for name → Call verify-otp again with name
+# curl -X POST http://localhost:3000/api/auth/verify-otp \
+#   -H "Content-Type: application/json" \
+#   -d '{"email": "test@example.com", "otp": "123456", "name": "Test User"}'
 
 # 4. Use the access token for protected routes
 # curl -X GET http://localhost:3000/api/auth/profile \
@@ -414,18 +380,24 @@ curl -X GET http://localhost:3000/api/
 # NOTES
 # ========================================
 
-# IMPORTANT: This API uses OTP-based authentication - no passwords required
+# SIMPLIFIED AUTH FLOW:
+# 1. User enters email → send-otp API (always sends OTP)
+# 2. User enters OTP → verify-otp API
+# 3a. If existing user → Returns tokens
+# 3b. If new user → Returns error with requiresSignup: true
+# 4. Frontend asks for name → verify-otp API with name
+# 5. Use access token for all protected routes
 # 
-# AUTHENTICATION FLOW:
-# 1. Signup: Send name, email, phone → OTP sent to email
-# 2. Login: Send email → OTP sent to email → Send email + OTP → Receive tokens
-# 3. Use access token for all protected routes
+# API RESPONSES:
+# - send-otp: Always sends OTP (creates temp user if needed)
+# - verify-otp (existing user): Returns tokens
+# - verify-otp (new user, no name): Returns error with requiresSignup: true
+# - verify-otp (new user, with name): Creates user and returns tokens
 # 
 # FIELD REQUIREMENTS:
-# - Phone field is optional in signup
-# - OTP must be 6 digits
 # - Email must be valid format
-# - Name must be 2-50 characters, letters and spaces only
+# - OTP must be 6 digits
+# - Name (for new users): 2-50 characters, letters and spaces only
 # 
 # MODEL STRUCTURE:
 # - User: name, email, phone(optional), isEmailVerified, cart, etc.
@@ -434,7 +406,7 @@ curl -X GET http://localhost:3000/api/
 # - Order: requires items with product, variant, quantity, price, totalPrice
 # 
 # REPLACE PLACEHOLDERS:
-# - YOUR_ACCESS_TOKEN: JWT token from login response
+# - YOUR_ACCESS_TOKEN: JWT token from verify-otp response
 # - ObjectId values (507f1f77bcf86cd799439011, etc.): Actual IDs from your database
 # - OTP codes: Actual 6-digit codes sent to email
 # 

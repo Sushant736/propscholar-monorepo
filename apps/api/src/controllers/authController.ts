@@ -6,6 +6,36 @@ import { logger } from "../utils/logger.js";
 import { AuthenticatedRequest } from "../middleware/auth.js";
 
 export class AuthController {
+  public static async checkEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      const user = await User.findOne({ email });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          exists: !!user,
+          user: user
+            ? {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                isEmailVerified: user.isEmailVerified,
+              }
+            : null,
+        },
+      });
+    } catch (error) {
+      logger.error("Check email error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
   public static async signup(req: Request, res: Response): Promise<void> {
     try {
       const { name, email, phone } = req.body;
@@ -68,99 +98,42 @@ export class AuthController {
     }
   }
 
-  public static async login(req: Request, res: Response): Promise<void> {
+  public static async sendOTP(req: Request, res: Response): Promise<void> {
     try {
-      const { email, otp } = req.body;
+      const { email } = req.body;
 
-      // Find user
-      const user = await User.findOne({ email }).select("+otpCode +otpExpires");
+      // Check if user exists
+      let user = await User.findOne({ email });
 
       if (!user) {
-        res.status(401).json({
-          success: false,
-          message: "Invalid email",
+        // Create a temporary user for OTP
+        user = new User({
+          name: "Temporary User", // Will be updated during signup
+          email,
+          phone: "",
         });
-        return;
       }
 
-      // Check if OTP is provided
-      if (otp) {
-        // Verify OTP
-        if (!user.otpCode || !user.otpExpires || user.otpExpires < new Date()) {
-          res.status(400).json({
-            success: false,
-            message: "OTP has expired. Please request a new one.",
-          });
-          return;
-        }
-
-        if (user.otpCode !== otp) {
-          res.status(400).json({
-            success: false,
-            message: "Invalid OTP",
-          });
-          return;
-        }
-
-        // Clear OTP after successful verification
-        user.otpCode = undefined;
-        user.otpExpires = undefined;
-        await user.save();
-      } else {
-        // Generate and send OTP
-        const otpCode = user.generateOTP();
-        await user.save();
-
-        try {
-          const html = EmailService.getOTPTemplate(user.name, otpCode);
-          await EmailService.sendEmail(
-            email,
-            "Your Login Verification Code",
-            html
-          );
-
-          res.status(200).json({
-            success: true,
-            message: "OTP sent to your email. Please verify to complete login.",
-            requiresOTP: true,
-          });
-          return;
-        } catch (emailError) {
-          logger.error("Failed to send OTP email:", emailError);
-          res.status(500).json({
-            success: false,
-            message: "Failed to send OTP. Please try again.",
-          });
-          return;
-        }
-      }
-
-      // Generate tokens after successful OTP verification
-      const tokens = JWTService.generateTokens({
-        userId: (user._id as any).toString(),
-        email: user.email,
-      });
-
-      // Save refresh token
-      user.refreshTokens.push(tokens.refreshToken);
+      const otpCode = user.generateOTP();
       await user.save();
 
-      res.status(200).json({
-        success: true,
-        message: "Login successful",
-        data: {
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-            isEmailVerified: user.isEmailVerified,
-          },
-          tokens,
-        },
-      });
+      try {
+        const html = EmailService.getOTPTemplate(user.name, otpCode);
+        await EmailService.sendEmail(email, "Your Verification Code", html);
+
+        res.status(200).json({
+          success: true,
+          message: "OTP sent to your email",
+        });
+      } catch (emailError) {
+        logger.error("Failed to send OTP email:", emailError);
+        res.status(500).json({
+          success: false,
+          message: "Failed to send OTP. Please try again.",
+        });
+      }
     } catch (error) {
-      logger.error("Login error:", error);
+      logger.error("Send OTP error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -170,7 +143,7 @@ export class AuthController {
 
   public static async verifyOTP(req: Request, res: Response): Promise<void> {
     try {
-      const { email, otp } = req.body;
+      const { email, otp, name } = req.body;
 
       const user = await User.findOne({ email }).select("+otpCode +otpExpires");
 
@@ -198,6 +171,24 @@ export class AuthController {
         return;
       }
 
+      // Check if this is a new user (temporary user created during sendOTP)
+      const isNewUser = user.name === "Temporary User";
+
+      if (isNewUser) {
+        // This is a new user, require name for signup
+        if (!name) {
+          res.status(400).json({
+            success: false,
+            message: "Name is required for new user signup",
+            requiresSignup: true,
+          });
+          return;
+        }
+
+        // Update user with provided name
+        user.name = name;
+      }
+
       // Clear OTP and generate tokens
       user.otpCode = undefined;
       user.otpExpires = undefined;
@@ -212,7 +203,9 @@ export class AuthController {
 
       res.status(200).json({
         success: true,
-        message: "OTP verified successfully",
+        message: isNewUser
+          ? "User registered and verified successfully"
+          : "OTP verified successfully",
         data: {
           user: {
             id: user._id,
@@ -222,196 +215,11 @@ export class AuthController {
             isEmailVerified: user.isEmailVerified,
           },
           tokens,
+          isNewUser,
         },
       });
     } catch (error) {
       logger.error("OTP verification error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async requestOTP(req: Request, res: Response): Promise<void> {
-    try {
-      const { email } = req.body;
-
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-        return;
-      }
-
-      const otpCode = user.generateOTP();
-      await user.save();
-
-      try {
-        const html = EmailService.getOTPTemplate(user.name, otpCode);
-        await EmailService.sendEmail(
-          email,
-          "Your Login Verification Code",
-          html
-        );
-
-        res.status(200).json({
-          success: true,
-          message: "OTP sent to your email",
-        });
-      } catch (emailError) {
-        logger.error("Failed to send OTP email:", emailError);
-        res.status(500).json({
-          success: false,
-          message: "Failed to send OTP. Please try again.",
-        });
-      }
-    } catch (error) {
-      logger.error("Request OTP error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async verifyEmail(req: Request, res: Response): Promise<void> {
-    try {
-      const { token } = req.body;
-
-      const user = await User.findOne({
-        emailVerificationToken: token,
-        emailVerificationExpires: { $gt: new Date() },
-      });
-
-      if (!user) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid or expired verification token",
-        });
-        return;
-      }
-
-      user.isEmailVerified = true;
-      user.emailVerificationToken = undefined;
-      user.emailVerificationExpires = undefined;
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Email verified successfully",
-      });
-    } catch (error) {
-      logger.error("Email verification error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async forgotPassword(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { email } = req.body;
-
-      const user = await User.findOne({ email });
-
-      if (!user) {
-        // Don't reveal if email exists or not
-        res.status(200).json({
-          success: true,
-          message: "If the email exists, a password reset link has been sent",
-        });
-        return;
-      }
-
-      // Generate OTP for password reset
-      const otpCode = user.generateOTP();
-      await user.save();
-
-      try {
-        const html = EmailService.getOTPTemplate(user.name, otpCode);
-        await EmailService.sendEmail(email, "Password Reset Code", html);
-
-        res.status(200).json({
-          success: true,
-          message: "If the email exists, a password reset code has been sent",
-        });
-      } catch (emailError) {
-        logger.error("Failed to send password reset email:", emailError);
-        res.status(500).json({
-          success: false,
-          message: "Failed to send password reset email. Please try again.",
-        });
-      }
-    } catch (error) {
-      logger.error("Forgot password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async resetPassword(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { token } = req.body;
-
-      const user = await User.findOne({
-        otpCode: token,
-        otpExpires: { $gt: new Date() },
-      });
-
-      if (!user) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid or expired reset token",
-        });
-        return;
-      }
-
-      // Clear OTP
-      user.otpCode = undefined;
-      user.otpExpires = undefined;
-      // Clear all refresh tokens for security
-      user.refreshTokens = [];
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Password reset successfully",
-      });
-    } catch (error) {
-      logger.error("Reset password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
-  public static async changePassword(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { currentPassword, newPassword } = req.body;
-
-      res.status(400).json({
-        success: false,
-        message: "Password change not supported in OTP-based authentication",
-      });
-    } catch (error) {
-      logger.error("Change password error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",

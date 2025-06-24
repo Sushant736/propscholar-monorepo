@@ -4,38 +4,21 @@ import { AuthController } from "../controllers/authController.js";
 import { authenticate } from "../middleware/auth.js";
 import {
   validateRequest,
-  signupValidation,
-  loginValidation,
+  emailValidation,
   otpValidation,
-  forgotPasswordValidation,
-  resetPasswordValidation,
   refreshTokenValidation,
-  verifyEmailValidation,
 } from "../middleware/validation.js";
-import {
-  authLimiter,
-  passwordResetLimiter,
-  otpLimiter,
-  emailVerificationLimiter,
-} from "../middleware/rateLimiter.js";
+import { authLimiter, otpLimiter } from "../middleware/rateLimiter.js";
 
 const router: ExpressRouter = Router();
 
 // Public routes
 router.post(
-  "/signup",
-  authLimiter,
-  signupValidation,
+  "/send-otp",
+  otpLimiter,
+  emailValidation,
   validateRequest,
-  AuthController.signup
-);
-
-router.post(
-  "/login",
-  authLimiter,
-  loginValidation,
-  validateRequest,
-  AuthController.login
+  AuthController.sendOTP
 );
 
 router.post(
@@ -44,38 +27,6 @@ router.post(
   otpValidation,
   validateRequest,
   AuthController.verifyOTP
-);
-
-router.post(
-  "/request-otp",
-  otpLimiter,
-  forgotPasswordValidation, // reusing email validation
-  validateRequest,
-  AuthController.requestOTP
-);
-
-router.post(
-  "/verify-email",
-  emailVerificationLimiter,
-  verifyEmailValidation,
-  validateRequest,
-  AuthController.verifyEmail
-);
-
-router.post(
-  "/forgot-password",
-  passwordResetLimiter,
-  forgotPasswordValidation,
-  validateRequest,
-  AuthController.forgotPassword
-);
-
-router.post(
-  "/reset-password",
-  passwordResetLimiter,
-  resetPasswordValidation,
-  validateRequest,
-  AuthController.resetPassword
 );
 
 router.post(
