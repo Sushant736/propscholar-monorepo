@@ -9,7 +9,7 @@ export interface ApiResponse<T = any> {
   requiresSignup?: boolean;
 }
 
-export interface ApiError {
+export interface ApiErrorData {
   message: string;
   status: number;
   requiresSignup?: boolean;
@@ -150,6 +150,7 @@ class HttpClient {
         } catch (refreshError) {
           // Refresh failed, clear tokens and throw error
           TokenManager.clearTokens();
+          console.error('Token refresh failed:', refreshError);
           throw new ApiError({
             message: 'Session expired. Please login again.',
             status: 401,
@@ -244,8 +245,15 @@ class HttpClient {
     );
   }
 
-  async delete<T = any>(url: string, skipAuth = false): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(url, { method: 'DELETE' }, skipAuth);
+  async delete<T = any>(url: string, body?: any, skipAuth = false): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(
+      url,
+      {
+        method: 'DELETE',
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      skipAuth
+    );
   }
 }
 
@@ -260,7 +268,7 @@ export class ApiError extends Error {
   status: number;
   requiresSignup?: boolean;
 
-  constructor({ message, status, requiresSignup }: { message: string; status: number; requiresSignup?: boolean }) {
+  constructor({ message, status, requiresSignup }: ApiErrorData) {
     super(message);
     this.name = 'ApiError';
     this.status = status;

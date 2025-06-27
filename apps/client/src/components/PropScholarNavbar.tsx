@@ -60,7 +60,10 @@ export const PropScholarNavbar = () => {
           
           <div className="flex items-center gap-4">
             {/* Cart Button */}
-            <button className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
+            <button 
+              onClick={() => router.push('/cart')}
+              className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+            >
               <ShoppingCart className="h-5 w-5 text-prop-scholar-main-text" />
               {totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 bg-prop-scholar-electric-blue text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
@@ -142,7 +145,10 @@ export const PropScholarNavbar = () => {
             <NavbarLogo />
             <div className="flex items-center gap-2">
               {/* Mobile Cart */}
-              <button className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
+              <button 
+                onClick={() => router.push('/cart')}
+                className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
+              >
                 <ShoppingCart className="h-5 w-5 text-prop-scholar-main-text" />
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-prop-scholar-electric-blue text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
