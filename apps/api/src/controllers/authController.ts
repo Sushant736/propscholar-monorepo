@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, IUserDocument } from "../models/User.js";
+import { User } from "../models/User.js";
 import { JWTService } from "../utils/jwt.js";
 import { EmailService } from "../services/emailService.js";
 import { logger } from "../utils/logger.js";
@@ -53,7 +53,6 @@ export class AuthController {
               ? "Email already registered"
               : "Phone number already registered",
         });
-        return;
       }
 
       // Create new user
@@ -69,8 +68,12 @@ export class AuthController {
 
       // Send OTP email
       try {
-        const html = EmailService.getOTPTemplate(name, otpCode);
-        await EmailService.sendEmail(email, "Your Verification Code", html);
+        if(process.env.NODE_ENV === "development") {
+          console.log("OTP Code:", otpCode);
+        } else {
+          const html = EmailService.getOTPTemplate(name, otpCode);
+          await EmailService.sendEmail(email, "Your Verification Code", html);
+        }
       } catch (emailError) {
         logger.error("Failed to send OTP email:", emailError);
       }
@@ -118,8 +121,12 @@ export class AuthController {
       await user.save();
 
       try {
-        const html = EmailService.getOTPTemplate(user.name, otpCode);
-        await EmailService.sendEmail(email, "Your Verification Code", html);
+        if(process.env.NODE_ENV === "development") {
+          console.log("OTP Code:", otpCode);
+        } else {
+          const html = EmailService.getOTPTemplate(user.name, otpCode);
+          await EmailService.sendEmail(email, "Your Verification Code", html);
+        }
 
         res.status(200).json({
           success: true,
@@ -145,7 +152,7 @@ export class AuthController {
     try {
       const { email, otp, name } = req.body;
 
-      const user = await User.findOne({ email }).select("+otpCode +otpExpires");
+      const user = await User.findOne({ email }).select("+otpCode +otpExpires +refreshTokens");
 
       if (!user) {
         res.status(404).json({
@@ -194,10 +201,15 @@ export class AuthController {
       user.otpExpires = undefined;
 
       const tokens = JWTService.generateTokens({
-        userId: (user._id as any).toString(),
+        userId: String(user._id),
         email: user.email,
       });
 
+      // Initialize refreshTokens array if it doesn't exist
+      if (!user.refreshTokens) {
+        user.refreshTokens = [];
+      }
+      
       user.refreshTokens.push(tokens.refreshToken);
       await user.save();
 
@@ -214,7 +226,8 @@ export class AuthController {
             phone: user.phone,
             isEmailVerified: user.isEmailVerified,
           },
-          tokens,
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
           isNewUser,
         },
       });
@@ -245,7 +258,7 @@ export class AuthController {
 
       // Generate new tokens
       const tokens = JWTService.generateTokens({
-        userId: (user._id as any).toString(),
+        userId: String(user._id),
         email: user.email,
       });
 
@@ -259,7 +272,10 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: "Tokens refreshed successfully",
-        data: { tokens },
+        data: {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        },
       });
     } catch (error) {
       logger.error("Refresh token error:", error);

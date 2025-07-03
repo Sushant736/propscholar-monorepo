@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { Toaster } from "@/components/ui/sonner"
+
 import "./globals.css";
 
 const geistSans = localFont({
@@ -44,6 +46,7 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               {children}
+              <Toaster />
             </CartProvider>
           </AuthProvider>
         </ThemeProvider>

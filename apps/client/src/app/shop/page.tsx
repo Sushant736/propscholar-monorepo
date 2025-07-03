@@ -1,167 +1,150 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { PropScholarNavbar } from "@/components/PropScholarNavbar";
 import { MagicCard } from "@/components/magicui/magic-card";
 import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 import { 
   Search, 
   Star, 
-  TrendingUp, 
   ShoppingCart,
   Users,
   Target,
   Clock,
-  DollarSign
+  DollarSign,
+  Loader2
 } from "lucide-react";
-import productsData from "@/data/products.json";
-
-interface Product {
-  id: string;
-  firmId: string;
-  firmName: string;
-  amount: string;
-  phase: number;
-  title: string;
-  description: string;
-  image: string;
-  originalPrice: number;
-  discountedPrice: number;
-  discount: number;
-  popular: boolean;
-  featured: boolean;
-  rules: any;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  logo: string;
-  featured: boolean;
-}
-
-interface GroupedProduct {
-  id: string;
-  firmId: string;
-  firmName: string;
-  amount: string;
-  title: string;
-  description: string;
-  image: string;
-  minPrice: number;
-  maxPrice: number;
-  minOriginalPrice: number;
-  maxOriginalPrice: number;
-  popular: boolean;
-  featured: boolean;
-  variants: Product[];
-  profitTarget: string;
-  maxDiscount: number;
-}
+import { categoriesApi, productsApi, Product, Category, variantsApi, Variant } from "@/lib/api";
 
 export default function ShopPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("popular");
+  const [sortBy, setSortBy] = useState<string>("featured");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { addToCart } = useCart();
 
-  const { categories, products }: { categories: Category[], products: Product[] } = productsData;
-
-  // Group products by firmId and amount
-  const groupedProducts = useMemo(() => {
-    const grouped = new Map<string, GroupedProduct>();
-
-    products.forEach(product => {
-      const key = `${product.firmId}-${product.amount}`;
-      
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          id: key,
-          firmId: product.firmId,
-          firmName: product.firmName,
-          amount: product.amount,
-          title: `${product.firmName} ${product.amount}`,
-          description: product.description,
-          image: product.image,
-          minPrice: product.discountedPrice,
-          maxPrice: product.discountedPrice,
-          minOriginalPrice: product.originalPrice,
-          maxOriginalPrice: product.originalPrice,
-          popular: product.popular,
-          featured: product.featured,
-          variants: [product],
-          profitTarget: product.rules.profitTarget || product.rules.phase1?.profitTarget || "N/A",
-          maxDiscount: product.discount
-        });
-      } else {
-        const existing = grouped.get(key)!;
-        existing.variants.push(product);
-        existing.minPrice = Math.min(existing.minPrice, product.discountedPrice);
-        existing.maxPrice = Math.max(existing.maxPrice, product.discountedPrice);
-        existing.minOriginalPrice = Math.min(existing.minOriginalPrice, product.originalPrice);
-        existing.maxOriginalPrice = Math.max(existing.maxOriginalPrice, product.originalPrice);
-        existing.popular = existing.popular || product.popular;
-        existing.featured = existing.featured || product.featured;
-        existing.maxDiscount = Math.max(existing.maxDiscount, product.discount);
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [categoriesData, productsData] = await Promise.all([
+          categoriesApi.getAll(),
+          productsApi.getAll({ limit: 100 }) // Get all products for now
+        ]);
+        
+        setCategories(categoriesData.categories);
+        setProducts(productsData.products);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      } finally {
+        setLoading(false);
       }
-    });
+    };
 
-    return Array.from(grouped.values());
-  }, [products]);
+    fetchData();
+  }, []);
 
-  // Filter and sort grouped products
+  // Filter and sort products
   const filteredProducts = useMemo(() => {
-    const filtered = groupedProducts.filter(product => {
-      const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.firmName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === "all" || product.firmId === selectedCategory;
+    const filtered = products.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           product.category.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || product.category._id === selectedCategory;
       
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && product.isActive;
     });
 
     // Sort products
     switch (sortBy) {
-      case "price-low":
-        filtered.sort((a, b) => a.minPrice - b.minPrice);
+      case "name":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
         break;
-      case "price-high":
-        filtered.sort((a, b) => b.maxPrice - a.maxPrice);
+      case "category":
+        filtered.sort((a, b) => a.category.name.localeCompare(b.category.name));
         break;
-      case "discount":
-        filtered.sort((a, b) => b.maxDiscount - a.maxDiscount);
-        break;
-      case "popular":
+      case "featured":
       default:
         filtered.sort((a, b) => {
-          if (a.popular && !b.popular) return -1;
-          if (!a.popular && b.popular) return 1;
-          if (a.featured && !b.featured) return -1;
-          if (!a.featured && b.featured) return 1;
-          return 0;
+          if (a.isFeatured && !b.isFeatured) return -1;
+          if (!a.isFeatured && b.isFeatured) return 1;
+          return a.name.localeCompare(b.name);
         });
     }
 
     return filtered;
-  }, [groupedProducts, searchTerm, selectedCategory, sortBy]);
+  }, [products, searchTerm, selectedCategory, sortBy]);
 
-  // const featuredProducts = groupedProducts.filter(p => p.featured);
-  // const popularProducts = groupedProducts.filter(p => p.popular);
+  const handleAddToCart = async (product: Product) => {
+    if (!product.variants || product.variants.length === 0) {
+      toast.error('This product has no available variants');
+      return;
+    }
 
-  const handleAddToCart = (product: GroupedProduct) => {
-    // Add the cheapest variant (2-step) to cart by default
-    const cheapestVariant = product.variants.reduce((prev, current) => 
-      prev.discountedPrice < current.discountedPrice ? prev : current
-    );
-    
-    addToCart({
-      id: cheapestVariant.id,
-      name: cheapestVariant.title,
-      price: cheapestVariant.discountedPrice,
-      image: cheapestVariant.image,
-    });
+    try {
+      // Fetch the first variant details to get pricing
+      const firstVariant: Variant = await variantsApi.getById(product.variants[0]._id);
+      
+      await addToCart({
+        productId: product._id,
+        variantId: firstVariant._id,
+        quantity: 1,
+        name: product.name,
+        price: firstVariant.comparePrice || 0,
+        image: product.images?.[0],
+      });
+      
+      // Optional: Show success feedback
+      toast.success('Product added to cart!');
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      toast.error('Failed to add product to cart. Please try again.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-prop-scholar-deep-navy via-slate-900 to-prop-scholar-deep-navy">
+        <PropScholarNavbar />
+        <div className="pt-24 flex items-center justify-center min-h-[80vh]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 text-prop-scholar-electric-blue animate-spin mx-auto mb-4" />
+            <p className="text-prop-scholar-secondary-text">Loading products...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-prop-scholar-deep-navy via-slate-900 to-prop-scholar-deep-navy">
+        <PropScholarNavbar />
+        <div className="pt-24 flex items-center justify-center min-h-[80vh]">
+          <div className="text-center">
+            <div className="text-6xl mb-4">😞</div>
+            <h1 className="text-prop-scholar-main-text font-bold text-2xl mb-2">
+              Error Loading Products
+            </h1>
+            <p className="text-prop-scholar-secondary-text mb-4">
+              {error}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-prop-scholar-electric-blue hover:bg-prop-scholar-royal-blue text-white rounded-xl font-medium transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-prop-scholar-deep-navy via-slate-900 to-prop-scholar-deep-navy">
@@ -182,7 +165,7 @@ export default function ShopPage() {
                 <span className="bg-gradient-to-r from-prop-scholar-electric-blue to-prop-scholar-amber-yellow bg-clip-text text-transparent"> Evaluations</span>
               </h1>
               <p className="text-xl text-prop-scholar-secondary-text max-w-3xl mx-auto">
-                Get funded with top prop firms at up to 75% discount. Choose from multiple evaluation programs
+                Get funded with top prop firms. Choose from multiple evaluation programs
                 and start your funded trading journey today.
               </p>
             </motion.div>
@@ -195,10 +178,10 @@ export default function ShopPage() {
               className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12"
             >
               {[
-                { icon: Users, label: "Active Traders", value: "10,000+" },
-                { icon: Target, label: "Success Rate", value: "78%" },
-                { icon: DollarSign, label: "Capital Deployed", value: "$50M+" },
-                { icon: Clock, label: "Avg. Evaluation", value: "14 days" },
+                { icon: Users, label: "Trading Firms", value: categories.length.toString() },
+                { icon: Target, label: "Products Available", value: products.length.toString() },
+                { icon: DollarSign, label: "Active Products", value: products.filter(p => p.isActive).length.toString() },
+                { icon: Clock, label: "Featured Products", value: products.filter(p => p.isFeatured).length.toString() },
               ].map((stat, index) => (
                 <div key={index} className="bg-white/5 backdrop-blur-sm border border-prop-scholar-electric-blue/20 rounded-2xl p-4">
                   <stat.icon className="h-6 w-6 text-prop-scholar-electric-blue mx-auto mb-2" />
@@ -219,20 +202,20 @@ export default function ShopPage() {
               transition={{ duration: 0.6 }}
               className="text-3xl font-bold text-prop-scholar-main-text mb-8"
             >
-              Featured Firms
+              Trading Firms
             </motion.h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {categories.filter(cat => cat.featured).map((category, index) => (
+              {categories.map((category, index) => (
                 <motion.div
-                  key={category.id}
+                  key={category._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.1 }}
                 >
                   <div
                     className="cursor-pointer"
-                    onClick={() => setSelectedCategory(category.id)}
+                    onClick={() => setSelectedCategory(category._id)}
                   >
                     <MagicCard className="p-6 h-full bg-white/5 backdrop-blur-sm border border-prop-scholar-electric-blue/20 hover:border-prop-scholar-electric-blue/40 transition-all duration-300">
                       <div className="text-center">
@@ -243,7 +226,7 @@ export default function ShopPage() {
                           {category.name}
                         </h3>
                         <p className="text-prop-scholar-secondary-text text-sm">
-                          {category.description}
+                          {category.products.length} products available
                         </p>
                       </div>
                     </MagicCard>
@@ -279,7 +262,7 @@ export default function ShopPage() {
                 >
                   <option value="all">All Firms</option>
                   {categories.map(category => (
-                    <option key={category.id} value={category.id}>
+                    <option key={category._id} value={category._id}>
                       {category.name}
                     </option>
                   ))}
@@ -291,10 +274,9 @@ export default function ShopPage() {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="px-4 py-3 bg-white/10 border border-prop-scholar-electric-blue/30 rounded-xl text-prop-scholar-main-text focus:border-prop-scholar-electric-blue focus:outline-none"
                 >
-                  <option value="popular">Most Popular</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="discount">Highest Discount</option>
+                  <option value="featured">Featured First</option>
+                  <option value="name">Name A-Z</option>
+                  <option value="category">By Category</option>
                 </select>
               </div>
             </div>
@@ -313,7 +295,7 @@ export default function ShopPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product, index) => (
                 <motion.div
-                  key={product.id}
+                  key={product._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: index * 0.05 }}
@@ -322,92 +304,42 @@ export default function ShopPage() {
                     <div className="p-6 h-full flex flex-col">
                       {/* Badges */}
                       <div className="flex items-center gap-2 mb-4">
-                        {product.popular && (
-                          <span className="bg-prop-scholar-amber-yellow text-prop-scholar-deep-navy px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                            <TrendingUp className="h-3 w-3" />
-                            Popular
-                          </span>
-                        )}
-                        {product.featured && (
+                        {product.isFeatured && (
                           <span className="bg-prop-scholar-electric-blue text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                             <Star className="h-3 w-3" />
                             Featured
                           </span>
                         )}
                         <span className="bg-white/10 text-prop-scholar-main-text px-2 py-1 rounded-full text-xs font-medium">
-                          {product.variants.length > 1 ? "1 & 2 Step" : `${product.variants[0].phase} Step`}
+                          {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
                         </span>
                       </div>
 
                       {/* Product Image */}
                       <div className="bg-gradient-to-br from-prop-scholar-electric-blue/20 to-prop-scholar-royal-blue/20 rounded-xl p-6 mb-4 text-center">
-                        <div className="text-prop-scholar-electric-blue font-bold text-2xl mb-2">
-                          ${product.amount}
+                        <div className="text-prop-scholar-electric-blue font-bold text-xl mb-2">
+                          {product.category.name}
                         </div>
-                        <div className="text-prop-scholar-main-text font-medium">
-                          {product.firmName}
+                        <div className="text-prop-scholar-main-text font-medium text-sm">
+                          {product.tags.join(' • ')}
                         </div>
                       </div>
 
                       {/* Product Info */}
                       <div className="flex-1">
-                        <h3 className="text-prop-scholar-main-text font-bold text-lg mb-2">
-                          {product.title}
+                        <h3 className="text-prop-scholar-main-text font-bold text-lg mb-2 line-clamp-2">
+                          {product.name}
                         </h3>
-                        <p className="text-prop-scholar-secondary-text text-sm mb-4 line-clamp-2">
+                        <p className="text-prop-scholar-secondary-text text-sm mb-4 line-clamp-3">
                           {product.description}
                         </p>
-
-                        {/* Key Stats */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-white/5 rounded-lg p-2 text-center">
-                            <div className="text-prop-scholar-electric-blue font-bold text-sm">
-                              {product.profitTarget}
-                            </div>
-                            <div className="text-prop-scholar-secondary-text text-xs">
-                              Profit Target
-                            </div>
-                          </div>
-                          <div className="bg-white/5 rounded-lg p-2 text-center">
-                            <div className="text-prop-scholar-amber-yellow font-bold text-sm">
-                              Up to {product.maxDiscount}%
-                            </div>
-                            <div className="text-prop-scholar-secondary-text text-xs">
-                              Discount
-                            </div>
-                          </div>
-                        </div>
                       </div>
 
-                      {/* Price and CTA */}
+                      {/* CTA */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            {product.variants.length > 1 ? (
-                              <>
-                                <span className="text-prop-scholar-secondary-text text-sm line-through">
-                                  ${product.minOriginalPrice}-${product.maxOriginalPrice}
-                                </span>
-                                <span className="text-prop-scholar-main-text font-bold text-xl ml-2">
-                                  ${product.minPrice}-${product.maxPrice}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-prop-scholar-secondary-text text-sm line-through">
-                                  ${product.minOriginalPrice}
-                                </span>
-                                <span className="text-prop-scholar-main-text font-bold text-xl ml-2">
-                                  ${product.minPrice}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => window.location.href = `/shop/${product.variants[0].id}`}
+                            onClick={() => window.location.href = `/shop/${product._id}`}
                             className="px-3 py-2 bg-white/10 hover:bg-white/20 text-prop-scholar-main-text rounded-lg font-medium transition-colors text-sm"
                           >
                             View Details

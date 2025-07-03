@@ -8,7 +8,7 @@ import {
   otpValidation,
   refreshTokenValidation,
 } from "../middleware/validation.js";
-import { authLimiter, otpLimiter } from "../middleware/rateLimiter.js";
+import {  otpLimiter } from "../middleware/rateLimiter.js";
 
 const router: ExpressRouter = Router();
 
@@ -44,3 +44,4 @@ router.post("/logout", authenticate, AuthController.logout);
 router.post("/logout-all", authenticate, AuthController.logoutAll);
 
 export default router;
+  
