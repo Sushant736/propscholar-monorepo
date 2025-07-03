@@ -13,6 +13,7 @@ import {
 import { useCart, type CartItem } from '@/contexts/CartContext';
 import { PropScholarNavbar } from '@/components/PropScholarNavbar';
 import { toast } from 'sonner';
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const { 
@@ -25,6 +26,7 @@ export default function CartPage() {
     removeFromCart, 
     clearCart 
   } = useCart();
+  const router = useRouter();
 
   const getCartItemId = (item: CartItem) => {
     return 'productId' in item ? `${item.productId}-${item.variantId}` : `${item.product._id}-${item.variant._id}`;
@@ -173,7 +175,7 @@ export default function CartPage() {
                               {details.name}
                             </h3>
                             <p className="text-prop-scholar-secondary-text">
-                              Price: ${details.price.toFixed(2)}
+                              Price: ₹{details.price.toLocaleString()}
                             </p>
                           </div>
 
@@ -199,7 +201,7 @@ export default function CartPage() {
                           {/* Total Price */}
                           <div className="text-right">
                             <p className="text-prop-scholar-main-text font-bold text-lg">
-                              ${(details.price * details.quantity).toFixed(2)}
+                              ₹{(details.price * details.quantity).toLocaleString()}
                             </p>
                           </div>
 
@@ -225,7 +227,7 @@ export default function CartPage() {
                   <div className="flex items-center justify-between mb-6">
                     <span className="text-prop-scholar-main-text font-bold text-xl">Total:</span>
                     <span className="text-prop-scholar-main-text font-bold text-2xl">
-                      ${totalPrice.toFixed(2)}
+                      ₹{totalPrice.toLocaleString()}
                     </span>
                   </div>
                   
@@ -237,8 +239,9 @@ export default function CartPage() {
                       Clear Cart
                     </button>
                     <button
-                      onClick={() => toast.info('Checkout functionality coming soon!')}
-                      className="px-6 py-3 bg-gradient-to-r from-prop-scholar-royal-blue to-prop-scholar-electric-blue hover:from-prop-scholar-electric-blue hover:to-prop-scholar-royal-blue text-white rounded-xl font-medium transition-colors"
+                      onClick={() => router.push('/checkout')}
+                      disabled={items.length === 0}
+                      className="px-6 py-3 bg-gradient-to-r from-prop-scholar-royal-blue to-prop-scholar-electric-blue hover:from-prop-scholar-electric-blue hover:to-prop-scholar-royal-blue text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Proceed to Checkout
                     </button>

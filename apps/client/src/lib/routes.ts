@@ -62,12 +62,12 @@ export const routes = {
   
   // Order endpoints
   orders: {
-    getAll: `${env.API_BASE_URL}/orders`,
-    getStats: `${env.API_BASE_URL}/orders/stats`,
-    getById: (id: string) => `${env.API_BASE_URL}/orders/${id}`,
     create: `${env.API_BASE_URL}/orders`,
+    getAll: `${env.API_BASE_URL}/orders`,
+    getById: (id: string) => `${env.API_BASE_URL}/orders/${id}`,
     cancel: (id: string) => `${env.API_BASE_URL}/orders/${id}/cancel`,
-    updateStatus: (id: string) => `${env.API_BASE_URL}/orders/${id}/status`,
+    checkPaymentStatus: (orderId: string) => `${env.API_BASE_URL}/orders/${orderId}/payment-status`,
+    paymentCallback: `${env.API_BASE_URL}/orders/payment/callback`,
   },
   
   // Health check
