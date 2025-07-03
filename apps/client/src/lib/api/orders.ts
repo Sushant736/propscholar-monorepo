@@ -1,10 +1,22 @@
-import { httpClient, ApiResponse } from '../http-client';
-import { routes } from '../routes';
+import { httpClient, ApiResponse } from "../http-client";
+import { routes } from "../routes";
 
 // Order interfaces
+export interface ProductSummary {
+  _id: string;
+  name: string;
+  description?: string;
+  images?: string[];
+}
+
+export interface VariantSummary {
+  _id: string;
+  name: string;
+}
+
 export interface OrderItem {
-  product: string;
-  variant: string;
+  product: ProductSummary;
+  variant?: VariantSummary;
   quantity: number;
   price: number;
   totalPrice: number;
@@ -31,7 +43,7 @@ export interface PaymentDetails {
   merchantOrderId: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
   phonepeOrderId?: string;
   phonepeTransactionId?: string;
   failureReason?: string;
@@ -50,7 +62,13 @@ export interface Order {
     shippingCost: number;
     total: number;
   };
-  status: 'pending' | 'confirmed' | 'processing' | 'completed' | 'cancelled' | 'refunded';
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "completed"
+    | "cancelled"
+    | "refunded";
   paymentDetails: PaymentDetails;
   customerDetails: CustomerDetails;
   shippingAddress?: Address;
@@ -125,11 +143,11 @@ export const ordersApi = {
       routes.orders.create,
       data
     );
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to create order');
+      throw new Error(response.message || "Failed to create order");
     }
-    
+
     return response.data;
   },
 
@@ -142,27 +160,28 @@ export const ordersApi = {
     status?: string;
     paymentStatus?: string;
     sortBy?: string;
-    sortOrder?: 'asc' | 'desc';
+    sortOrder?: "asc" | "desc";
   }): Promise<OrderListResponse> {
     const searchParams = new URLSearchParams();
-    
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.status) searchParams.append('status', params.status);
-    if (params?.paymentStatus) searchParams.append('paymentStatus', params.paymentStatus);
-    if (params?.sortBy) searchParams.append('sortBy', params.sortBy);
-    if (params?.sortOrder) searchParams.append('sortOrder', params.sortOrder);
 
-    const url = searchParams.toString() 
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.paymentStatus)
+      searchParams.append("paymentStatus", params.paymentStatus);
+    if (params?.sortBy) searchParams.append("sortBy", params.sortBy);
+    if (params?.sortOrder) searchParams.append("sortOrder", params.sortOrder);
+
+    const url = searchParams.toString()
       ? `${routes.orders.getAll}?${searchParams.toString()}`
       : routes.orders.getAll;
 
     const response: ApiResponse<OrderListResponse> = await httpClient.get(url);
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to fetch orders');
+      throw new Error(response.message || "Failed to fetch orders");
     }
-    
+
     return response.data;
   },
 
@@ -173,11 +192,11 @@ export const ordersApi = {
     const response: ApiResponse<{ order: Order }> = await httpClient.get(
       routes.orders.getById(orderId)
     );
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to fetch order');
+      throw new Error(response.message || "Failed to fetch order");
     }
-    
+
     return response.data.order;
   },
 
@@ -188,11 +207,11 @@ export const ordersApi = {
     const response: ApiResponse<{ order: Order }> = await httpClient.put(
       routes.orders.cancel(orderId)
     );
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to cancel order');
+      throw new Error(response.message || "Failed to cancel order");
     }
-    
+
     return response.data.order;
   },
 
@@ -203,11 +222,11 @@ export const ordersApi = {
     const response: ApiResponse<PaymentStatusResponse> = await httpClient.get(
       routes.orders.checkPaymentStatus(orderId)
     );
-    
+
     if (!response.success || !response.data) {
-      throw new Error(response.message || 'Failed to check payment status');
+      throw new Error(response.message || "Failed to check payment status");
     }
-    
+
     return response.data;
   },
-}; 
+};

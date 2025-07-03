@@ -40,22 +40,22 @@ export class OrderController {
    * Generate a unique 8-digit order number
    */
   private static async generateOrderNumber(): Promise<string> {
-    let orderNumber = '';
+    let orderNumber = "";
     let isUnique = false;
-    
+
     // Generate a unique 8-digit order number
     while (!isUnique) {
       // Generate 8-digit number (10000000 to 99999999)
       const randomNumber = Math.floor(Math.random() * 90000000) + 10000000;
       orderNumber = randomNumber.toString();
-      
+
       // Check if this order number already exists
       const existingOrder = await Order.findOne({ orderNumber });
       if (!existingOrder) {
         isUnique = true;
       }
     }
-    
+
     return orderNumber;
   }
 
@@ -68,8 +68,14 @@ export class OrderController {
   ): Promise<void> {
     try {
       const userId = req.user?._id;
-      console.log(userId)
-      const { customerDetails, shippingAddress, billingAddress, notes, redirectUrl }: CreateOrderRequest = req.body;
+      console.log(userId);
+      const {
+        customerDetails,
+        shippingAddress,
+        billingAddress,
+        notes,
+        redirectUrl,
+      }: CreateOrderRequest = req.body;
 
       // Get user with cart
       const user = await User.findById(userId).populate([
@@ -82,7 +88,6 @@ export class OrderController {
           select: "name comparePrice sku isActive stock",
         },
       ]);
-      
 
       if (!user) {
         res.status(404).json({
@@ -105,8 +110,19 @@ export class OrderController {
       const orderItems = [];
 
       for (const cartItem of user.cart) {
-        const product = cartItem.product as unknown as { _id: string; name: string; isActive: boolean };
-        const variant = cartItem.variant as unknown as { _id: string; name: string; comparePrice: number; sku: string; isActive: boolean; stock: number };
+        const product = cartItem.product as unknown as {
+          _id: string;
+          name: string;
+          isActive: boolean;
+        };
+        const variant = cartItem.variant as unknown as {
+          _id: string;
+          name: string;
+          comparePrice: number;
+          sku: string;
+          isActive: boolean;
+          stock: number;
+        };
 
         // Validate product and variant are active
         if (!product.isActive || !variant.isActive) {
@@ -199,7 +215,7 @@ export class OrderController {
         order.paymentDetails.phonepeOrderId = paymentOrder.orderId;
         await order.save();
 
-        logger.info('Order created successfully', {
+        logger.info("Order created successfully", {
           orderId: order._id,
           orderNumber: order.orderNumber,
           merchantOrderId,
@@ -232,7 +248,7 @@ export class OrderController {
         order.paymentDetails.failureReason = "Payment gateway error";
         await order.save();
 
-        logger.error('Payment order creation failed', {
+        logger.error("Payment order creation failed", {
           orderId: order._id,
           error: paymentError,
         });
@@ -240,7 +256,10 @@ export class OrderController {
         res.status(500).json({
           success: false,
           message: "Failed to create payment order",
-          error: paymentError instanceof Error ? paymentError.message : 'Unknown error',
+          error:
+            paymentError instanceof Error
+              ? paymentError.message
+              : "Unknown error",
         });
       }
     } catch (error) {
@@ -255,29 +274,36 @@ export class OrderController {
   /**
    * Handle PhonePe payment callback
    */
-  public static async handlePaymentCallback(req: Request, res: Response): Promise<void> {
+  public static async handlePaymentCallback(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
-      const authorization = req.headers.authorization || '';
+      const authorization = req.headers.authorization || "";
       const responseBody = JSON.stringify(req.body);
 
-      logger.info('Received PhonePe callback', {
-        authorization: authorization ? 'present' : 'missing',
+      logger.info("Received PhonePe callback", {
+        authorization: authorization ? "present" : "missing",
         bodyKeys: Object.keys(req.body),
       });
 
       // Validate callback
       const phonepeService = PhonePeService.getInstance();
-      const callbackData = phonepeService.validateCallback(authorization, responseBody);
+      const callbackData = phonepeService.validateCallback(
+        authorization,
+        responseBody
+      );
 
-      const { merchantOrderId, state, errorCode, detailedErrorCode } = callbackData.payload;
+      const { merchantOrderId, state, errorCode, detailedErrorCode } =
+        callbackData.payload;
 
       // Find order by merchant order ID
       const order = await Order.findOne({
-        'paymentDetails.merchantOrderId': merchantOrderId,
+        "paymentDetails.merchantOrderId": merchantOrderId,
       });
 
       if (!order) {
-        logger.error('Order not found for callback', { merchantOrderId });
+        logger.error("Order not found for callback", { merchantOrderId });
         res.status(404).json({
           success: false,
           message: "Order not found",
@@ -286,13 +312,18 @@ export class OrderController {
       }
 
       // Update order based on payment status
-      order.paymentDetails.status = this.mapPhonePeStateToStatus(state);
-      order.paymentDetails.gatewayResponse = callbackData as unknown as Record<string, unknown>;
+      order.paymentDetails.status =
+        OrderController.mapPhonePeStateToStatus(state);
+      order.paymentDetails.gatewayResponse = callbackData as unknown as Record<
+        string,
+        unknown
+      >;
       order.paymentDetails.paymentTimestamp = new Date();
 
-      if (state === 'COMPLETED') {
-        order.status = 'confirmed';
-        order.paymentDetails.phonepeTransactionId = callbackData.payload.transactionId;
+      if (state === "COMPLETED") {
+        order.status = "confirmed";
+        order.paymentDetails.phonepeTransactionId =
+          callbackData.payload.transactionId;
 
         // Update stock quantities
         await this.updateStockAfterPayment(order);
@@ -300,16 +331,17 @@ export class OrderController {
         // Clear user's cart
         await User.findByIdAndUpdate(order.user, { cart: [] });
 
-        logger.info('Payment completed successfully', {
+        logger.info("Payment completed successfully", {
           orderId: order._id,
           merchantOrderId,
           transactionId: callbackData.payload.transactionId,
         });
-      } else if (state === 'FAILED') {
-        order.status = 'cancelled';
-        order.paymentDetails.failureReason = errorCode || detailedErrorCode || 'Payment failed';
+      } else if (state === "FAILED") {
+        order.status = "cancelled";
+        order.paymentDetails.failureReason =
+          errorCode || detailedErrorCode || "Payment failed";
 
-        logger.warn('Payment failed', {
+        logger.warn("Payment failed", {
           orderId: order._id,
           merchantOrderId,
           errorCode,
@@ -335,10 +367,15 @@ export class OrderController {
   /**
    * Check payment status and update order
    */
-  public static async checkPaymentStatus(req: AuthenticatedRequest, res: Response): Promise<void> {
+  public static async checkPaymentStatus(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const { orderId } = req.params;
       const userId = req.user?._id;
+
+      console.log(orderId, userId);
 
       const order = await Order.findOne({ _id: orderId, user: userId });
 
@@ -353,24 +390,51 @@ export class OrderController {
       // Check status with PhonePe
       try {
         const phonepeService = PhonePeService.getInstance();
-        const paymentStatus = await phonepeService.getOrderStatus(order.paymentDetails.merchantOrderId);
+        const paymentStatus = await phonepeService.getOrderStatus(
+          order.paymentDetails.merchantOrderId
+        );
+
+        console.log(122, paymentStatus);
 
         // Update order status based on PhonePe response
-        const newStatus = this.mapPhonePeStateToStatus(paymentStatus.state);
-        
-        if (order.paymentDetails.status !== newStatus) {
-          order.paymentDetails.status = newStatus;
-          
-          if (paymentStatus.state === 'COMPLETED' && order.status === 'pending') {
-            order.status = 'confirmed';
-            await this.updateStockAfterPayment(order);
-            await User.findByIdAndUpdate(order.user, { cart: [] });
-          } else if (paymentStatus.state === 'FAILED' && order.status === 'pending') {
-            order.status = 'cancelled';
-          }
-          
-          await order.save();
+        const newStatus = OrderController.mapPhonePeStateToStatus(
+          paymentStatus.state
+        );
+
+        // Update all relevant payment details from PhonePe response
+        const paymentDetail: any =
+          Array.isArray(paymentStatus.paymentDetails) &&
+          paymentStatus.paymentDetails.length > 0
+            ? paymentStatus.paymentDetails[0]
+            : {};
+
+        order.paymentDetails.status = newStatus;
+        // Store the gateway payment mode in a new field
+        order.paymentDetails.gatewayPaymentMode =
+          paymentDetail.paymentMode || order.paymentDetails.gatewayPaymentMode;
+        order.paymentDetails.phonepeTransactionId =
+          paymentDetail.transactionId ||
+          order.paymentDetails.phonepeTransactionId;
+        order.paymentDetails.paymentTimestamp = paymentDetail.timestamp
+          ? new Date(paymentDetail.timestamp)
+          : order.paymentDetails.paymentTimestamp;
+        order.paymentDetails.amount =
+          paymentStatus.amount || order.paymentDetails.amount;
+        order.paymentDetails.phonepeOrderId =
+          paymentStatus.orderId || order.paymentDetails.phonepeOrderId;
+
+        if (paymentStatus.state === "COMPLETED" && order.status === "pending") {
+          order.status = "confirmed";
+          await this.updateStockAfterPayment(order);
+          await User.findByIdAndUpdate(order.user, { cart: [] });
+        } else if (
+          paymentStatus.state === "FAILED" &&
+          order.status === "pending"
+        ) {
+          order.status = "cancelled";
         }
+
+        await order.save();
 
         res.status(200).json({
           success: true,
@@ -390,7 +454,7 @@ export class OrderController {
           },
         });
       } catch (error) {
-        logger.error('Failed to check payment status', {
+        logger.error("Failed to check payment status", {
           orderId,
           merchantOrderId: order.paymentDetails.merchantOrderId,
           error,
@@ -574,24 +638,28 @@ export class OrderController {
 
   // Helper methods
 
-  private static mapPhonePeStateToStatus(state: string): "pending" | "processing" | "completed" | "failed" | "cancelled" {
+  private static mapPhonePeStateToStatus(
+    state: string
+  ): "pending" | "processing" | "completed" | "failed" | "cancelled" {
     switch (state) {
-      case 'PENDING':
-        return 'pending';
-      case 'PROCESSING':
-        return 'processing';
-      case 'COMPLETED':
-        return 'completed';
-      case 'FAILED':
-        return 'failed';
-      case 'CANCELLED':
-        return 'cancelled';
+      case "PENDING":
+        return "pending";
+      case "PROCESSING":
+        return "processing";
+      case "COMPLETED":
+        return "completed";
+      case "FAILED":
+        return "failed";
+      case "CANCELLED":
+        return "cancelled";
       default:
-        return 'pending';
+        return "pending";
     }
   }
 
-  private static async updateStockAfterPayment(order: IOrderDocument): Promise<void> {
+  private static async updateStockAfterPayment(
+    order: IOrderDocument
+  ): Promise<void> {
     try {
       for (const item of order.items) {
         await Variant.findByIdAndUpdate(
@@ -600,12 +668,12 @@ export class OrderController {
           { new: true }
         );
       }
-      logger.info('Stock updated after payment', { 
+      logger.info("Stock updated after payment", {
         orderId: order._id,
-        itemCount: order.items.length 
+        itemCount: order.items.length,
       });
     } catch (error) {
-      logger.error('Failed to update stock after payment', {
+      logger.error("Failed to update stock after payment", {
         orderId: order._id,
         error,
       });
@@ -629,13 +697,13 @@ export class OrderController {
       const userId = req.user?._id;
 
       const totalOrders = await Order.countDocuments({ user: userId });
-      const completedOrders = await Order.countDocuments({ 
-        user: userId, 
-        status: 'completed' 
+      const completedOrders = await Order.countDocuments({
+        user: userId,
+        status: "completed",
       });
-      const pendingOrders = await Order.countDocuments({ 
-        user: userId, 
-        status: 'pending' 
+      const pendingOrders = await Order.countDocuments({
+        user: userId,
+        status: "pending",
       });
 
       res.status(200).json({

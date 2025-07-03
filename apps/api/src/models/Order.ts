@@ -26,6 +26,7 @@ export interface IPaymentDetails {
     status: "pending" | "completed" | "failed";
     refundDate: Date;
   }[];
+  gatewayPaymentMode?: string;
 }
 
 export interface IOrder {
@@ -39,7 +40,13 @@ export interface IOrder {
     shippingCost: number;
     total: number; // Final amount in INR
   };
-  status: "pending" | "confirmed" | "processing" | "completed" | "cancelled" | "refunded";
+  status:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "completed"
+    | "cancelled"
+    | "refunded";
   paymentDetails: IPaymentDetails;
   customerDetails: {
     name: string;
@@ -86,7 +93,7 @@ const orderItemSchema = new Schema<IOrderItem>({
   },
   variant: {
     type: Schema.Types.ObjectId,
-    ref: "Variant", 
+    ref: "Variant",
     required: true,
   },
   quantity: {
@@ -146,16 +153,21 @@ const paymentDetailsSchema = new Schema<IPaymentDetails>({
   paymentTimestamp: {
     type: Date,
   },
-  refundDetails: [{
-    refundId: String,
-    amount: Number,
-    reason: String,
-    status: {
-      type: String,
-      enum: ["pending", "completed", "failed"],
+  refundDetails: [
+    {
+      refundId: String,
+      amount: Number,
+      reason: String,
+      status: {
+        type: String,
+        enum: ["pending", "completed", "failed"],
+      },
+      refundDate: Date,
     },
-    refundDate: Date,
-  }],
+  ],
+  gatewayPaymentMode: {
+    type: String,
+  },
 });
 
 const addressSchema = new Schema({
@@ -242,7 +254,14 @@ const orderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed", "processing", "completed", "cancelled", "refunded"],
+      enum: [
+        "pending",
+        "confirmed",
+        "processing",
+        "completed",
+        "cancelled",
+        "refunded",
+      ],
       default: "pending",
     },
     paymentDetails: {

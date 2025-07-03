@@ -23,8 +23,17 @@ router.patch(
 );
 
 // Payment related routes
-router.get("/:id/payment-status", authenticate, generalLimiter, OrderController.checkPaymentStatus);
-router.post("/payment/callback", generalLimiter, OrderController.handlePaymentCallback);
+router.get(
+  "/:orderId/payment-status",
+  authenticate,
+  generalLimiter,
+  OrderController.checkPaymentStatus
+);
+router.post(
+  "/payment/callback",
+  generalLimiter,
+  OrderController.handlePaymentCallback
+);
 
 // Admin routes (you can add admin middleware later)
 router.patch("/:id/status", generalLimiter, OrderController.updateStatus);
