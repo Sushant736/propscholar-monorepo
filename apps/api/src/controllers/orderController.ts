@@ -4,19 +4,91 @@ import { User } from "../models/User.js";
 import { Variant } from "../models/Variant.js";
 import { logger } from "../utils/logger.js";
 import { AuthenticatedRequest } from "../middleware/auth.js";
+import { PhonePeService } from "../services/phonepeService.js";
+import { FilterQuery } from "mongoose";
+
+interface CreateOrderRequest {
+  customerDetails?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  shippingAddress?: {
+    name: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  billingAddress?: {
+    name: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  notes?: string;
+  redirectUrl: string;
+}
 
 export class OrderController {
-  public static async create(
+  /**
+   * Generate a unique 8-digit order number
+   */
+  private static async generateOrderNumber(): Promise<string> {
+    let orderNumber = "";
+    let isUnique = false;
+
+    // Generate a unique 8-digit order number
+    while (!isUnique) {
+      // Generate 8-digit number (10000000 to 99999999)
+      const randomNumber = Math.floor(Math.random() * 90000000) + 10000000;
+      orderNumber = randomNumber.toString();
+
+      // Check if this order number already exists
+      const existingOrder = await Order.findOne({ orderNumber });
+      if (!existingOrder) {
+        isUnique = true;
+      }
+    }
+
+    return orderNumber;
+  }
+
+  /**
+   * Create a new order from user's cart
+   */
+  public static async createOrderFromCart(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
-      const { items, shippingAddress, billingAddress, paymentMethod, notes } =
-        req.body;
+      const userId = req.user?._id;
+      console.log(userId);
+      const {
+        customerDetails,
+        shippingAddress,
+        billingAddress,
+        notes,
+        redirectUrl,
+      }: CreateOrderRequest = req.body;
 
-      // Validate user
-      const user = await User.findById(userId);
+      // Get user with cart
+      const user = await User.findById(userId).populate([
+        {
+          path: "cart.product",
+          select: "name images isActive",
+        },
+        {
+          path: "cart.variant",
+          select: "name comparePrice sku isActive stock",
+        },
+      ]);
+
       if (!user) {
         res.status(404).json({
           success: false,
@@ -25,84 +97,171 @@ export class OrderController {
         return;
       }
 
-      // Validate items and calculate totals
+      if (!user.cart || user.cart.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Cart is empty",
+        });
+        return;
+      }
+
+      // Validate and calculate order totals
       let subtotal = 0;
-      const validatedItems = [];
+      const orderItems = [];
 
-      for (const item of items) {
-        const variant = await Variant.findById(item.variant).populate(
-          "product"
-        );
-        if (!variant) {
+      for (const cartItem of user.cart) {
+        const product = cartItem.product as unknown as {
+          _id: string;
+          name: string;
+          isActive: boolean;
+        };
+        const variant = cartItem.variant as unknown as {
+          _id: string;
+          name: string;
+          comparePrice: number;
+          sku: string;
+          isActive: boolean;
+          stock: number;
+        };
+
+        // Validate product and variant are active
+        if (!product.isActive || !variant.isActive) {
           res.status(400).json({
             success: false,
-            message: `Variant ${item.variant} not found`,
+            message: `Product ${product.name} is no longer available`,
           });
           return;
         }
 
-        if (variant.stock < item.quantity) {
+        // Check stock availability
+        if (variant.stock < cartItem.quantity) {
           res.status(400).json({
             success: false,
-            message: `Insufficient stock for variant ${variant.name}`,
+            message: `Insufficient stock for ${product.name} - ${variant.name}. Available: ${variant.stock}`,
           });
           return;
         }
 
-        const totalPrice = variant.price * item.quantity;
+        const price = variant.comparePrice || 0;
+        const totalPrice = price * cartItem.quantity;
         subtotal += totalPrice;
 
-        validatedItems.push({
-          product: variant.product._id,
+        orderItems.push({
+          product: product._id,
           variant: variant._id,
-          quantity: item.quantity,
-          price: variant.price,
+          quantity: cartItem.quantity,
+          price,
           totalPrice,
         });
       }
 
-      // Calculate totals (you can add tax and shipping logic here)
+      // Calculate final pricing (you can add tax, shipping, discount logic here)
       const tax = 0; // Add tax calculation logic
       const shippingCost = 0; // Add shipping calculation logic
       const discount = 0; // Add discount logic
       const total = subtotal + tax + shippingCost - discount;
 
+      // Use provided customer details or fallback to user details
+      const finalCustomerDetails = customerDetails || {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+      };
+
+      // Generate merchant order ID
+      const merchantOrderId = PhonePeService.generateMerchantOrderId();
+
+      // Generate unique order number
+      const orderNumber = await OrderController.generateOrderNumber();
+
+      // Create order in our database first
       const order = new Order({
+        orderNumber,
         user: userId,
-        items: validatedItems,
-        subtotal,
-        tax,
-        shippingCost,
-        discount,
-        total,
-        paymentMethod,
+        items: orderItems,
+        pricing: {
+          subtotal,
+          tax,
+          discount,
+          shippingCost,
+          total,
+        },
+        paymentDetails: {
+          paymentMethod: "phonepe",
+          merchantOrderId,
+          amount: PhonePeService.convertToPaisa(total),
+          currency: "INR",
+          status: "pending",
+        },
+        customerDetails: finalCustomerDetails,
         shippingAddress,
         billingAddress,
         notes,
+        status: "pending",
       });
 
       await order.save();
 
-      // Update stock
-      for (const item of items) {
-        const variant = await Variant.findById(item.variant);
-        if (variant) {
-          variant.stock -= item.quantity;
-          await variant.save();
-        }
+      // Create PhonePe payment order
+      try {
+        const phonepeService = PhonePeService.getInstance();
+        const paymentOrder = await phonepeService.createOrder({
+          amount: total,
+          redirectUrl: `${redirectUrl}?orderId=${order._id}`,
+          merchantOrderId,
+        });
+
+        // Update order with PhonePe details
+        order.paymentDetails.phonepeOrderId = paymentOrder.orderId;
+        await order.save();
+
+        logger.info("Order created successfully", {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          merchantOrderId,
+          phonepeOrderId: paymentOrder.orderId,
+          total,
+        });
+
+        res.status(201).json({
+          success: true,
+          message: "Order created successfully",
+          data: {
+            order: {
+              _id: order._id,
+              orderNumber: order.orderNumber,
+              total: order.pricing.total,
+              status: order.status,
+              paymentStatus: order.paymentDetails.status,
+            },
+            payment: {
+              redirectUrl: paymentOrder.redirectUrl,
+              orderId: paymentOrder.orderId,
+              merchantOrderId,
+              expireAt: paymentOrder.expireAt,
+            },
+          },
+        });
+      } catch (paymentError) {
+        // If payment order creation fails, mark our order as failed
+        order.paymentDetails.status = "failed";
+        order.paymentDetails.failureReason = "Payment gateway error";
+        await order.save();
+
+        logger.error("Payment order creation failed", {
+          orderId: order._id,
+          error: paymentError,
+        });
+
+        res.status(500).json({
+          success: false,
+          message: "Failed to create payment order",
+          error:
+            paymentError instanceof Error
+              ? paymentError.message
+              : "Unknown error",
+        });
       }
-
-      // Clear user's cart
-      user.cart = [];
-      await user.save();
-
-      res.status(201).json({
-        success: true,
-        message: "Order created successfully",
-        data: {
-          order,
-        },
-      });
     } catch (error) {
       logger.error("Create order error:", error);
       res.status(500).json({
@@ -112,12 +271,228 @@ export class OrderController {
     }
   }
 
-  public static async getAll(
+  /**
+   * Handle PhonePe payment callback
+   */
+  public static async handlePaymentCallback(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const authorization = req.headers.authorization || "";
+      const responseBody = JSON.stringify(req.body);
+
+      logger.info("Received PhonePe callback", {
+        authorization: authorization ? "present" : "missing",
+        bodyKeys: Object.keys(req.body),
+      });
+
+      // Validate callback
+      const phonepeService = PhonePeService.getInstance();
+      const callbackData = phonepeService.validateCallback(
+        authorization,
+        responseBody
+      );
+
+      const { merchantOrderId, state, errorCode, detailedErrorCode } =
+        callbackData.payload;
+
+      // Find order by merchant order ID
+      const order = await Order.findOne({
+        "paymentDetails.merchantOrderId": merchantOrderId,
+      });
+
+      if (!order) {
+        logger.error("Order not found for callback", { merchantOrderId });
+        res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+        return;
+      }
+
+      // Update order based on payment status
+      order.paymentDetails.status =
+        OrderController.mapPhonePeStateToStatus(state);
+      order.paymentDetails.gatewayResponse = callbackData as unknown as Record<
+        string,
+        unknown
+      >;
+      order.paymentDetails.paymentTimestamp = new Date();
+
+      if (state === "COMPLETED") {
+        order.status = "confirmed";
+        order.paymentDetails.phonepeTransactionId =
+          callbackData.payload.transactionId;
+
+        // Update stock quantities
+        await this.updateStockAfterPayment(order);
+
+        // Clear user's cart
+        await User.findByIdAndUpdate(order.user, { cart: [] });
+
+        logger.info("Payment completed successfully", {
+          orderId: order._id,
+          merchantOrderId,
+          transactionId: callbackData.payload.transactionId,
+        });
+      } else if (state === "FAILED") {
+        order.status = "cancelled";
+        order.paymentDetails.failureReason =
+          errorCode || detailedErrorCode || "Payment failed";
+
+        logger.warn("Payment failed", {
+          orderId: order._id,
+          merchantOrderId,
+          errorCode,
+          detailedErrorCode,
+        });
+      }
+
+      await order.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Callback processed successfully",
+      });
+    } catch (error) {
+      logger.error("Payment callback error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Callback processing failed",
+      });
+    }
+  }
+
+  /**
+   * Check payment status and update order
+   */
+  public static async checkPaymentStatus(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const { orderId } = req.params;
+      const userId = req.user?._id;
+
+      console.log(orderId, userId);
+
+      const order = await Order.findOne({ _id: orderId, user: userId });
+
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+        return;
+      }
+
+      // Check status with PhonePe
+      try {
+        const phonepeService = PhonePeService.getInstance();
+        const paymentStatus = await phonepeService.getOrderStatus(
+          order.paymentDetails.merchantOrderId
+        );
+
+        console.log(122, paymentStatus);
+
+        // Update order status based on PhonePe response
+        const newStatus = OrderController.mapPhonePeStateToStatus(
+          paymentStatus.state
+        );
+
+        // Update all relevant payment details from PhonePe response
+        const paymentDetail: any =
+          Array.isArray(paymentStatus.paymentDetails) &&
+          paymentStatus.paymentDetails.length > 0
+            ? paymentStatus.paymentDetails[0]
+            : {};
+
+        order.paymentDetails.status = newStatus;
+        // Store the gateway payment mode in a new field
+        order.paymentDetails.gatewayPaymentMode =
+          paymentDetail.paymentMode || order.paymentDetails.gatewayPaymentMode;
+        order.paymentDetails.phonepeTransactionId =
+          paymentDetail.transactionId ||
+          order.paymentDetails.phonepeTransactionId;
+        order.paymentDetails.paymentTimestamp = paymentDetail.timestamp
+          ? new Date(paymentDetail.timestamp)
+          : order.paymentDetails.paymentTimestamp;
+        order.paymentDetails.amount =
+          paymentStatus.amount || order.paymentDetails.amount;
+        order.paymentDetails.phonepeOrderId =
+          paymentStatus.orderId || order.paymentDetails.phonepeOrderId;
+
+        if (paymentStatus.state === "COMPLETED" && order.status === "pending") {
+          order.status = "confirmed";
+          await this.updateStockAfterPayment(order);
+          await User.findByIdAndUpdate(order.user, { cart: [] });
+        } else if (
+          paymentStatus.state === "FAILED" &&
+          order.status === "pending"
+        ) {
+          order.status = "cancelled";
+        }
+
+        await order.save();
+
+        res.status(200).json({
+          success: true,
+          data: {
+            order: {
+              _id: order._id,
+              orderNumber: order.orderNumber,
+              status: order.status,
+              paymentStatus: order.paymentDetails.status,
+              total: order.pricing.total,
+            },
+            paymentDetails: {
+              state: paymentStatus.state,
+              amount: PhonePeService.convertToINR(paymentStatus.amount),
+              paymentDetails: paymentStatus.paymentDetails,
+            },
+          },
+        });
+      } catch (error) {
+        logger.error("Failed to check payment status", {
+          orderId,
+          merchantOrderId: order.paymentDetails.merchantOrderId,
+          error,
+        });
+
+        // Return current order status even if PhonePe check fails
+        res.status(200).json({
+          success: true,
+          data: {
+            order: {
+              _id: order._id,
+              orderNumber: order.orderNumber,
+              status: order.status,
+              paymentStatus: order.paymentDetails.status,
+              total: order.pricing.total,
+            },
+            error: "Could not verify payment status with gateway",
+          },
+        });
+      }
+    } catch (error) {
+      logger.error("Check payment status error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Get all orders for a user
+   */
+  public static async getAllOrders(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = req.user?._id;
       const {
         page = 1,
         limit = 10,
@@ -129,12 +504,12 @@ export class OrderController {
 
       const skip = (Number(page) - 1) * Number(limit);
 
-      const filter: any = { user: userId };
+      const filter: FilterQuery<IOrderDocument> = { user: userId };
 
       if (status) filter.status = status;
-      if (paymentStatus) filter.paymentStatus = paymentStatus;
+      if (paymentStatus) filter["paymentDetails.status"] = paymentStatus;
 
-      const sort: any = {};
+      const sort = {} as Record<string, number>;
       sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
 
       const orders = await Order.find(filter)
@@ -142,7 +517,7 @@ export class OrderController {
         .populate("items.variant", "name sku")
         .skip(skip)
         .limit(Number(limit))
-        .sort(sort);
+        .sort(sort as { [key: string]: 1 | -1 });
 
       const total = await Order.countDocuments(filter);
 
@@ -167,17 +542,20 @@ export class OrderController {
     }
   }
 
-  public static async getById(
+  /**
+   * Get order by ID
+   */
+  public static async getOrderById(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const order = await Order.findOne({ _id: id, user: userId })
         .populate("items.product", "name images description")
-        .populate("items.variant", "name sku price")
+        .populate("items.variant", "name sku")
         .populate("user", "name email phone");
 
       if (!order) {
@@ -203,59 +581,16 @@ export class OrderController {
     }
   }
 
-  public static async updateStatus(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const {
-        status,
-        paymentStatus,
-        trackingNumber,
-        trackingUrl,
-        estimatedDelivery,
-      } = req.body;
-
-      const order = await Order.findById(id);
-
-      if (!order) {
-        res.status(404).json({
-          success: false,
-          message: "Order not found",
-        });
-        return;
-      }
-
-      // Update fields
-      if (status) order.status = status;
-      if (paymentStatus) order.paymentStatus = paymentStatus;
-      if (trackingNumber) order.trackingNumber = trackingNumber;
-      if (trackingUrl) order.trackingUrl = trackingUrl;
-      if (estimatedDelivery) order.estimatedDelivery = estimatedDelivery;
-
-      await order.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Order updated successfully",
-        data: {
-          order,
-        },
-      });
-    } catch (error) {
-      logger.error("Update order error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Internal server error",
-      });
-    }
-  }
-
+  /**
+   * Cancel an order (only if payment is pending)
+   */
   public static async cancelOrder(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const order = await Order.findOne({ _id: id, user: userId });
 
@@ -267,33 +602,30 @@ export class OrderController {
         return;
       }
 
-      // Check if order can be cancelled
-      if (order.status !== "pending" && order.status !== "confirmed") {
+      if (order.paymentDetails.status === "completed") {
         res.status(400).json({
           success: false,
-          message: "Order cannot be cancelled at this stage",
+          message: "Cannot cancel a paid order",
+        });
+        return;
+      }
+
+      if (order.status === "cancelled") {
+        res.status(400).json({
+          success: false,
+          message: "Order is already cancelled",
         });
         return;
       }
 
       order.status = "cancelled";
+      order.paymentDetails.status = "cancelled";
       await order.save();
-
-      // Restore stock
-      for (const item of order.items) {
-        const variant = await Variant.findById(item.variant);
-        if (variant) {
-          variant.stock += item.quantity;
-          await variant.save();
-        }
-      }
 
       res.status(200).json({
         success: true,
         message: "Order cancelled successfully",
-        data: {
-          order,
-        },
+        data: { order },
       });
     } catch (error) {
       logger.error("Cancel order error:", error);
@@ -304,48 +636,125 @@ export class OrderController {
     }
   }
 
+  // Helper methods
+
+  private static mapPhonePeStateToStatus(
+    state: string
+  ): "pending" | "processing" | "completed" | "failed" | "cancelled" {
+    switch (state) {
+      case "PENDING":
+        return "pending";
+      case "PROCESSING":
+        return "processing";
+      case "COMPLETED":
+        return "completed";
+      case "FAILED":
+        return "failed";
+      case "CANCELLED":
+        return "cancelled";
+      default:
+        return "pending";
+    }
+  }
+
+  private static async updateStockAfterPayment(
+    order: IOrderDocument
+  ): Promise<void> {
+    try {
+      for (const item of order.items) {
+        await Variant.findByIdAndUpdate(
+          item.variant,
+          { $inc: { stock: -item.quantity } },
+          { new: true }
+        );
+      }
+      logger.info("Stock updated after payment", {
+        orderId: order._id,
+        itemCount: order.items.length,
+      });
+    } catch (error) {
+      logger.error("Failed to update stock after payment", {
+        orderId: order._id,
+        error,
+      });
+      // Don't throw error as payment was successful
+    }
+  }
+
+  // Method aliases for routes compatibility
+  public static getAll = OrderController.getAllOrders;
+  public static getById = OrderController.getOrderById;
+  public static create = OrderController.createOrderFromCart;
+
+  /**
+   * Get order statistics (placeholder)
+   */
   public static async getOrderStats(
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
-      const stats = await Order.aggregate([
-        { $match: { user: userId } },
-        {
-          $group: {
-            _id: null,
-            totalOrders: { $sum: 1 },
-            totalSpent: { $sum: "$total" },
-            averageOrderValue: { $avg: "$total" },
-          },
-        },
-      ]);
-
-      const statusStats = await Order.aggregate([
-        { $match: { user: userId } },
-        {
-          $group: {
-            _id: "$status",
-            count: { $sum: 1 },
-          },
-        },
-      ]);
+      const totalOrders = await Order.countDocuments({ user: userId });
+      const completedOrders = await Order.countDocuments({
+        user: userId,
+        status: "completed",
+      });
+      const pendingOrders = await Order.countDocuments({
+        user: userId,
+        status: "pending",
+      });
 
       res.status(200).json({
         success: true,
         data: {
-          stats: stats[0] || {
-            totalOrders: 0,
-            totalSpent: 0,
-            averageOrderValue: 0,
-          },
-          statusStats,
+          totalOrders,
+          completedOrders,
+          pendingOrders,
         },
       });
     } catch (error) {
       logger.error("Get order stats error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Update order status (admin only - placeholder)
+   */
+  public static async updateStatus(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const order = await Order.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!order) {
+        res.status(404).json({
+          success: false,
+          message: "Order not found",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Order status updated",
+        data: { order },
+      });
+    } catch (error) {
+      logger.error("Update order status error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",

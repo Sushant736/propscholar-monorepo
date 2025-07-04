@@ -1,101 +1,219 @@
-import Image from "next/image";
+import { PropScholarNavbar } from "@/components/PropScholarNavbar";
+import { HeroSection } from "@/components/HeroSection";
+import { GoogleGeminiEffectDemo } from "@/components/PropScholarGeminiWrapper";
+import { PlatformShowcase } from "@/components/PlatformShowcase";
+import { EvaluationRules } from "@/components/EvaluationRules";
+import { DiscordCommunity } from "@/components/DiscordCommunity";
+import { BentoGrid, BentoCard } from "@/components/magicui/bento-grid";
+import { Users, Trophy, Zap, Target, TrendingUp } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className='min-h-screen bg-background scroll-smooth'>
+      <PropScholarNavbar />
+      <HeroSection />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* New sections below hero */}
+      <GoogleGeminiEffectDemo />
+      <PlatformShowcase />
+      <EvaluationRules />
+      <DiscordCommunity />
+
+      {/* Additional sections for testing scroll behavior */}
+      <section className='relative min-h-screen bg-gradient-to-b from-prop-scholar-deep-navy to-slate-900 p-8 overflow-hidden'>
+        {/* Hi-tech animated background */}
+        <div className='pointer-events-none absolute inset-0 z-0'>
+          <div className='absolute left-1/4 top-1/4 w-1/2 h-1/2 bg-gradient-to-tr from-prop-scholar-electric-blue/20 to-prop-scholar-royal-blue/10 rounded-full blur-3xl animate-pulse' />
+          <div className='absolute right-0 bottom-0 w-1/3 h-1/3 bg-gradient-to-br from-prop-scholar-amber-yellow/10 to-prop-scholar-electric-blue/10 rounded-full blur-2xl animate-pulse' />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className='relative z-10 max-w-6xl mx-auto'>
+          <h2 className='text-4xl font-bold text-prop-scholar-main-text mb-8 text-center drop-shadow-[0_2px_16px_rgba(36,107,253,0.15)]'>
+            Features & Benefits
+          </h2>
+          <BentoGrid className='grid-cols-1 md:grid-cols-3 gap-6 md:auto-rows-[22rem]'>
+            <BentoCard
+              name='Active Community'
+              className='col-span-1 row-span-1 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-prop-scholar-electric-blue/30 shadow-[0_4px_32px_0_rgba(36,107,253,0.08)] hover:shadow-[0_8px_48px_0_rgba(36,107,253,0.18)] transition-all duration-300 group'
+              background={
+                <div className='absolute inset-0 bg-prop-scholar-electric-blue/10' />
+              }
+              Icon={(props) => (
+                <Users
+                  {...props}
+                  className='h-14 w-14 text-prop-scholar-electric-blue drop-shadow-[0_0_16px_rgba(36,107,253,0.7)] brightness-150 animate-pulse-slow'
+                />
+              )}
+              description={
+                <>
+                  Join{" "}
+                  <span className='font-bold text-prop-scholar-electric-blue'>
+                    15,000+ active traders
+                  </span>{" "}
+                  and get real-time support, mentorship, and networking
+                  opportunities. <br />
+                  <span className='text-prop-scholar-main-text font-semibold'>
+                    Collaborate, learn, and grow together.
+                  </span>
+                </>
+              }
+              href='#community'
+              cta='Meet the Community'
+            />
+            <BentoCard
+              name='Success Stories'
+              className='col-span-1 row-span-1 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-prop-scholar-amber-yellow/30 shadow-[0_4px_32px_0_rgba(253,186,36,0.08)] hover:shadow-[0_8px_48px_0_rgba(253,186,36,0.18)] transition-all duration-300 group'
+              background={
+                <div className='absolute inset-0 bg-prop-scholar-amber-yellow/10' />
+              }
+              Icon={(props) => (
+                <Trophy
+                  {...props}
+                  className='h-14 w-14 text-prop-scholar-amber-yellow drop-shadow-[0_0_16px_rgba(253,186,36,0.7)] brightness-150 animate-pulse-slow'
+                />
+              )}
+              description={
+                <>
+                  <span className='font-bold text-prop-scholar-amber-yellow'>
+                    500+ traders funded
+                  </span>{" "}
+                  and counting. <br />
+                  Read inspiring journeys and discover how PropScholar has
+                  transformed lives.
+                  <br />
+                  <span className='text-prop-scholar-main-text font-semibold'>
+                    Your success story could be next!
+                  </span>
+                </>
+              }
+              href='#success'
+              cta='See Stories'
+            />
+            <BentoCard
+              name='Live Signals'
+              className='col-span-1 row-span-1 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-green-400/30 shadow-[0_4px_32px_0_rgba(34,197,94,0.08)] hover:shadow-[0_8px_48px_0_rgba(34,197,94,0.18)] transition-all duration-300 group'
+              background={<div className='absolute inset-0 bg-green-400/10' />}
+              Icon={(props) => (
+                <Zap
+                  {...props}
+                  className='h-14 w-14 text-green-400 drop-shadow-[0_0_16px_rgba(34,197,94,0.7)] brightness-150 animate-pulse-slow'
+                />
+              )}
+              description={
+                <>
+                  <span className='font-bold text-green-400'>
+                    24/7 live trading signals
+                  </span>{" "}
+                  from verified experts.
+                  <br />
+                  Never miss a market opportunity with instant alerts and
+                  actionable insights.
+                  <br />
+                  <span className='text-prop-scholar-main-text font-semibold'>
+                    Stay ahead of the curve.
+                  </span>
+                </>
+              }
+              href='#signals'
+              cta='Get Signals'
+            />
+            <BentoCard
+              name='Trading Signals'
+              className='col-span-2 row-span-1 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-prop-scholar-royal-blue/30 shadow-[0_4px_32px_0_rgba(36,107,253,0.08)] hover:shadow-[0_8px_48px_0_rgba(36,107,253,0.18)] transition-all duration-300 group'
+              background={
+                <div className='absolute inset-0 bg-prop-scholar-royal-blue/10' />
+              }
+              Icon={(props) => (
+                <Target
+                  {...props}
+                  className='h-14 w-14 text-prop-scholar-royal-blue drop-shadow-[0_0_16px_rgba(36,107,253,0.7)] brightness-150 animate-pulse-slow'
+                />
+              )}
+              description={
+                <>
+                  <span className='font-bold text-prop-scholar-royal-blue'>
+                    Real-time trading alerts
+                  </span>{" "}
+                  and actionable insights.
+                  <br />
+                  Get notified instantly about high-probability setups and
+                  market moves.
+                  <br />
+                  <span className='text-prop-scholar-main-text font-semibold'>
+                    Maximize your trading edge.
+                  </span>
+                </>
+              }
+              href='#trading'
+              cta='View Alerts'
+            />
+            <BentoCard
+              name='Market Analysis'
+              className='col-span-1 row-span-1 bg-white/10 dark:bg-white/5 backdrop-blur-xl border border-prop-scholar-main-text/30 shadow-[0_4px_32px_0_rgba(30,41,59,0.08)] hover:shadow-[0_8px_48px_0_rgba(30,41,59,0.18)] transition-all duration-300 group'
+              background={
+                <div className='absolute inset-0 bg-prop-scholar-main-text/10' />
+              }
+              Icon={(props) => (
+                <TrendingUp
+                  {...props}
+                  className='h-14 w-14 text-prop-scholar-main-text drop-shadow-[0_0_16px_rgba(30,41,59,0.7)] brightness-150 animate-pulse-slow'
+                />
+              )}
+              description={
+                <>
+                  <span className='font-bold text-prop-scholar-main-text'>
+                    Daily market breakdowns
+                  </span>{" "}
+                  and educational content.
+                  <br />
+                  Learn from in-depth analysis, webinars, and expert commentary.
+                  <br />
+                  <span className='text-prop-scholar-electric-blue font-semibold'>
+                    Upgrade your trading knowledge.
+                  </span>
+                </>
+              }
+              href='#analysis'
+              cta='See Analysis'
+            />
+          </BentoGrid>
+        </div>
+      </section>
+
+      <section className='min-h-screen bg-gradient-to-b from-slate-900 to-prop-scholar-deep-navy p-8'>
+        <div className='max-w-4xl mx-auto text-center'>
+          <h2 className='text-4xl font-bold text-prop-scholar-main-text mb-8'>
+            Why Choose Prop Scholar?
+          </h2>
+          <div className='space-y-8'>
+            <div className='bg-white/5 rounded-xl p-8'>
+              <h3 className='text-2xl font-semibold text-prop-scholar-electric-blue mb-4'>
+                Expert Analysis
+              </h3>
+              <p className='text-prop-scholar-secondary-text text-lg'>
+                Get detailed insights and analysis from experienced prop
+                traders.
+              </p>
+            </div>
+            <div className='bg-white/5 rounded-xl p-8'>
+              <h3 className='text-2xl font-semibold text-prop-scholar-amber-yellow mb-4'>
+                Proven Strategies
+              </h3>
+              <p className='text-prop-scholar-secondary-text text-lg'>
+                Learn from successful trading strategies that actually work.
+              </p>
+            </div>
+            <div className='bg-white/5 rounded-xl p-8'>
+              <h3 className='text-2xl font-semibold text-prop-scholar-electric-blue mb-4'>
+                Community Support
+              </h3>
+              <p className='text-prop-scholar-secondary-text text-lg'>
+                Join a community of like-minded traders working towards the same
+                goals.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

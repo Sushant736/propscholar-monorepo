@@ -4,31 +4,56 @@ export interface IOrderItem {
   product: mongoose.Types.ObjectId;
   variant: mongoose.Types.ObjectId;
   quantity: number;
-  price: number;
-  totalPrice: number;
+  price: number; // Price at time of order
+  totalPrice: number; // price * quantity
+}
+
+export interface IPaymentDetails {
+  paymentMethod: "phonepe" | "razorpay" | "payu" | "manual";
+  phonepeOrderId?: string; // PhonePe's internal order ID
+  phonepeTransactionId?: string; // PhonePe transaction ID
+  merchantOrderId: string; // Our unique order ID for PhonePe
+  amount: number; // Amount in paisa
+  currency: string; // INR
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled";
+  failureReason?: string;
+  gatewayResponse?: Record<string, unknown>; // Store raw gateway response
+  paymentTimestamp?: Date;
+  refundDetails?: {
+    refundId: string;
+    amount: number;
+    reason: string;
+    status: "pending" | "completed" | "failed";
+    refundDate: Date;
+  }[];
+  gatewayPaymentMode?: string;
 }
 
 export interface IOrder {
-  orderNumber: string;
+  orderNumber: string; // Our internal order number
   user: mongoose.Types.ObjectId;
   items: IOrderItem[];
-  subtotal: number;
-  tax: number;
-  shippingCost: number;
-  discount: number;
-  total: number;
+  pricing: {
+    subtotal: number;
+    tax: number;
+    discount: number;
+    shippingCost: number;
+    total: number; // Final amount in INR
+  };
   status:
     | "pending"
     | "confirmed"
     | "processing"
-    | "shipped"
-    | "delivered"
+    | "completed"
     | "cancelled"
     | "refunded";
-  paymentStatus: "pending" | "paid" | "failed" | "refunded";
-  paymentMethod: string;
-  paymentTransactionId?: string;
-  shippingAddress: {
+  paymentDetails: IPaymentDetails;
+  customerDetails: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  shippingAddress?: {
     name: string;
     phone: string;
     address: string;
@@ -47,9 +72,13 @@ export interface IOrder {
     zipCode: string;
   };
   notes?: string;
-  estimatedDelivery?: Date;
-  trackingNumber?: string;
-  trackingUrl?: string;
+  deliveryDetails?: {
+    estimatedDelivery?: Date;
+    actualDelivery?: Date;
+    trackingNumber?: string;
+    trackingUrl?: string;
+    courier?: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -81,6 +110,63 @@ const orderItemSchema = new Schema<IOrderItem>({
     type: Number,
     required: true,
     min: [0, "Total price cannot be negative"],
+  },
+});
+
+const paymentDetailsSchema = new Schema<IPaymentDetails>({
+  paymentMethod: {
+    type: String,
+    enum: ["phonepe", "razorpay", "payu", "manual"],
+    required: true,
+  },
+  phonepeOrderId: {
+    type: String,
+  },
+  phonepeTransactionId: {
+    type: String,
+  },
+  merchantOrderId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  amount: {
+    type: Number,
+    required: true,
+    min: [0, "Amount cannot be negative"],
+  },
+  currency: {
+    type: String,
+    default: "INR",
+  },
+  status: {
+    type: String,
+    enum: ["pending", "processing", "completed", "failed", "cancelled"],
+    default: "pending",
+  },
+  failureReason: {
+    type: String,
+  },
+  gatewayResponse: {
+    type: Schema.Types.Mixed,
+  },
+  paymentTimestamp: {
+    type: Date,
+  },
+  refundDetails: [
+    {
+      refundId: String,
+      amount: Number,
+      reason: String,
+      status: {
+        type: String,
+        enum: ["pending", "completed", "failed"],
+      },
+      refundDate: Date,
+    },
+  ],
+  gatewayPaymentMode: {
+    type: String,
   },
 });
 
@@ -136,33 +222,35 @@ const orderSchema = new Schema<IOrder>(
       required: true,
     },
     items: [orderItemSchema],
-    subtotal: {
-      type: Number,
-      required: true,
-      min: [0, "Subtotal cannot be negative"],
-    },
-    tax: {
-      type: Number,
-      required: true,
-      min: [0, "Tax cannot be negative"],
-      default: 0,
-    },
-    shippingCost: {
-      type: Number,
-      required: true,
-      min: [0, "Shipping cost cannot be negative"],
-      default: 0,
-    },
-    discount: {
-      type: Number,
-      required: true,
-      min: [0, "Discount cannot be negative"],
-      default: 0,
-    },
-    total: {
-      type: Number,
-      required: true,
-      min: [0, "Total cannot be negative"],
+    pricing: {
+      subtotal: {
+        type: Number,
+        required: true,
+        min: [0, "Subtotal cannot be negative"],
+      },
+      tax: {
+        type: Number,
+        required: true,
+        min: [0, "Tax cannot be negative"],
+        default: 0,
+      },
+      discount: {
+        type: Number,
+        required: true,
+        min: [0, "Discount cannot be negative"],
+        default: 0,
+      },
+      shippingCost: {
+        type: Number,
+        required: true,
+        min: [0, "Shipping cost cannot be negative"],
+        default: 0,
+      },
+      total: {
+        type: Number,
+        required: true,
+        min: [0, "Total cannot be negative"],
+      },
     },
     status: {
       type: String,
@@ -170,30 +258,35 @@ const orderSchema = new Schema<IOrder>(
         "pending",
         "confirmed",
         "processing",
-        "shipped",
-        "delivered",
+        "completed",
         "cancelled",
         "refunded",
       ],
       default: "pending",
     },
-    paymentStatus: {
-      type: String,
-      enum: ["pending", "paid", "failed", "refunded"],
-      default: "pending",
-    },
-    paymentMethod: {
-      type: String,
+    paymentDetails: {
+      type: paymentDetailsSchema,
       required: true,
-      trim: true,
     },
-    paymentTransactionId: {
-      type: String,
-      trim: true,
+    customerDetails: {
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      email: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        required: true,
+        trim: true,
+      },
     },
     shippingAddress: {
       type: addressSchema,
-      required: true,
     },
     billingAddress: {
       type: addressSchema,
@@ -202,16 +295,12 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       trim: true,
     },
-    estimatedDelivery: {
-      type: Date,
-    },
-    trackingNumber: {
-      type: String,
-      trim: true,
-    },
-    trackingUrl: {
-      type: String,
-      trim: true,
+    deliveryDetails: {
+      estimatedDelivery: Date,
+      actualDelivery: Date,
+      trackingNumber: String,
+      trackingUrl: String,
+      courier: String,
     },
   },
   {
@@ -225,31 +314,13 @@ const orderSchema = new Schema<IOrder>(
   }
 );
 
-// Index for performance
+// Indexes for performance
 orderSchema.index({ orderNumber: 1 });
 orderSchema.index({ user: 1 });
 orderSchema.index({ status: 1 });
-orderSchema.index({ paymentStatus: 1 });
+orderSchema.index({ "paymentDetails.status": 1 });
+orderSchema.index({ "paymentDetails.merchantOrderId": 1 });
+orderSchema.index({ "paymentDetails.phonepeOrderId": 1 });
 orderSchema.index({ createdAt: -1 });
-
-// Generate order number before saving
-orderSchema.pre("save", async function (next) {
-  if (this.isNew) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-
-    // Get count of orders for today
-    const today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const orderCount = await mongoose.model("Order").countDocuments({
-      createdAt: { $gte: today },
-    });
-
-    const sequence = (orderCount + 1).toString().padStart(4, "0");
-    this.orderNumber = `ORD${year}${month}${day}${sequence}`;
-  }
-  next();
-});
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);

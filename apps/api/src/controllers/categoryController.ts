@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Category, ICategoryDocument } from "../models/Category.js";
+import { Category } from "../models/Category.js";
 import { logger } from "../utils/logger.js";
 
 export class CategoryController {

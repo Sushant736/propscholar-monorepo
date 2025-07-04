@@ -1,0 +1,339 @@
+{
+  "categories": [
+    {
+      "id": "maven",
+      "name": "Maven Trading",
+      "description": "Professional prop trading firm with competitive evaluation programs",
+      "logo": "/firms/maven.png",
+      "featured": true
+    },
+    {
+      "id": "funding-pips",
+      "name": "Funding Pips",
+      "description": "Innovative trading platform with flexible funding solutions",
+      "logo": "/firms/funding-pips.png",
+      "featured": true
+    },
+    {
+      "id": "the5ers",
+      "name": "The5ers",
+      "description": "Leading prop firm with proven track record",
+      "logo": "/firms/the5ers.png",
+      "featured": false
+    },
+    {
+      "id": "ftmo",
+      "name": "FTMO",
+      "description": "World's largest prop trading firm",
+      "logo": "/firms/ftmo.png",
+      "featured": true
+    },
+    {
+      "id": "topstep",
+      "name": "TopStep",
+      "description": "Futures trading evaluation platform",
+      "logo": "/firms/topstep.png",
+      "featured": false
+    }
+  ],
+  "products": [
+    {
+      "id": "maven-5k-1step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "5K",
+      "phase": 1,
+      "title": "Maven 5K - 1 Phase",
+      "description": "Entry-level trading evaluation with $5,000 account size. Perfect for beginners looking to start their prop trading journey.",
+      "image": "/products/maven-5k.jpg",
+      "originalPrice": 199,
+      "discountedPrice": 49,
+      "discount": 75,
+      "popular": false,
+      "featured": false,
+      "rules": {
+        "profitTarget": "8%",
+        "maxDailyLoss": "5%",
+        "maxTotalLoss": "10%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "5",
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-5k-2step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "5K",
+      "phase": 2,
+      "title": "Maven 5K - 2 Phase",
+      "description": "Two-phase evaluation program with $5,000 account size. Structured approach for consistent traders.",
+      "image": "/products/maven-5k.jpg",
+      "originalPrice": 149,
+      "discountedPrice": 39,
+      "discount": 74,
+      "popular": false,
+      "featured": false,
+      "rules": {
+        "phase1": {
+          "profitTarget": "8%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "30 days",
+          "minTradingDays": "4"
+        },
+        "phase2": {
+          "profitTarget": "5%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "60 days",
+          "minTradingDays": "4"
+        },
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-10k-1step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "10K",
+      "phase": 1,
+      "title": "Maven 10K - 1 Phase",
+      "description": "Mid-tier trading evaluation with $10,000 account size. Great balance of risk and reward.",
+      "image": "/products/maven-10k.jpg",
+      "originalPrice": 299,
+      "discountedPrice": 79,
+      "discount": 74,
+      "popular": true,
+      "featured": false,
+      "rules": {
+        "profitTarget": "8%",
+        "maxDailyLoss": "5%",
+        "maxTotalLoss": "10%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "5",
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-10k-2step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "10K",
+      "phase": 2,
+      "title": "Maven 10K - 2 Phase",
+      "description": "Two-phase evaluation with $10,000 account size. Lower entry cost with proven methodology.",
+      "image": "/products/maven-10k.jpg",
+      "originalPrice": 249,
+      "discountedPrice": 69,
+      "discount": 72,
+      "popular": false,
+      "featured": false,
+      "rules": {
+        "phase1": {
+          "profitTarget": "8%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "30 days",
+          "minTradingDays": "4"
+        },
+        "phase2": {
+          "profitTarget": "5%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "60 days",
+          "minTradingDays": "4"
+        },
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-20k-1step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "20K",
+      "phase": 1,
+      "title": "Maven 20K - 1 Phase",
+      "description": "High-value trading evaluation with $20,000 account size. For experienced traders seeking larger capital.",
+      "image": "/products/maven-20k.jpg",
+      "originalPrice": 499,
+      "discountedPrice": 129,
+      "discount": 74,
+      "popular": false,
+      "featured": true,
+      "rules": {
+        "profitTarget": "8%",
+        "maxDailyLoss": "5%",
+        "maxTotalLoss": "10%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "5",
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-20k-2step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "20K",
+      "phase": 2,
+      "title": "Maven 20K - 2 Phase",
+      "description": "Premium two-phase evaluation with $20,000 account size. Comprehensive evaluation process.",
+      "image": "/products/maven-20k.jpg",
+      "originalPrice": 399,
+      "discountedPrice": 109,
+      "discount": 73,
+      "popular": false,
+      "featured": false,
+      "rules": {
+        "phase1": {
+          "profitTarget": "8%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "30 days",
+          "minTradingDays": "4"
+        },
+        "phase2": {
+          "profitTarget": "5%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "60 days",
+          "minTradingDays": "4"
+        },
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "maven-50k-1step",
+      "firmId": "maven",
+      "firmName": "Maven Trading",
+      "amount": "50K",
+      "phase": 1,
+      "title": "Maven 50K - 1 Phase",
+      "description": "Premium trading evaluation with $50,000 account size. For serious traders ready for institutional capital.",
+      "image": "/products/maven-50k.jpg",
+      "originalPrice": 799,
+      "discountedPrice": 199,
+      "discount": 75,
+      "popular": false,
+      "featured": true,
+      "rules": {
+        "profitTarget": "8%",
+        "maxDailyLoss": "5%",
+        "maxTotalLoss": "10%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "5",
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "funding-pips-10k-1step",
+      "firmId": "funding-pips",
+      "firmName": "Funding Pips",
+      "amount": "10K",
+      "phase": 1,
+      "title": "Funding Pips 10K - 1 Phase",
+      "description": "Fast-track evaluation with $10,000 account size. Quick path to funded account.",
+      "image": "/products/funding-pips-10k.jpg",
+      "originalPrice": 319,
+      "discountedPrice": 89,
+      "discount": 72,
+      "popular": true,
+      "featured": false,
+      "rules": {
+        "profitTarget": "10%",
+        "maxDailyLoss": "4%",
+        "maxTotalLoss": "8%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "3",
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "funding-pips-25k-2step",
+      "firmId": "funding-pips",
+      "firmName": "Funding Pips",
+      "amount": "25K",
+      "phase": 2,
+      "title": "Funding Pips 25K - 2 Phase",
+      "description": "Two-phase evaluation with $25,000 account size. Flexible trading conditions.",
+      "image": "/products/funding-pips-25k.jpg",
+      "originalPrice": 449,
+      "discountedPrice": 119,
+      "discount": 73,
+      "popular": false,
+      "featured": true,
+      "rules": {
+        "phase1": {
+          "profitTarget": "10%",
+          "maxDailyLoss": "4%",
+          "maxTotalLoss": "8%",
+          "tradingPeriod": "45 days",
+          "minTradingDays": "3"
+        },
+        "phase2": {
+          "profitTarget": "6%",
+          "maxDailyLoss": "4%",
+          "maxTotalLoss": "8%",
+          "tradingPeriod": "Unlimited",
+          "minTradingDays": "3"
+        },
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "ftmo-10k-2step",
+      "firmId": "ftmo",
+      "firmName": "FTMO",
+      "amount": "10K",
+      "phase": 2,
+      "title": "FTMO 10K - 2 Phase",
+      "description": "Industry-standard evaluation with $10,000 account size. Proven methodology.",
+      "image": "/products/ftmo-10k.jpg",
+      "originalPrice": 329,
+      "discountedPrice": 99,
+      "discount": 70,
+      "popular": true,
+      "featured": false,
+      "rules": {
+        "phase1": {
+          "profitTarget": "10%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "30 days",
+          "minTradingDays": "4"
+        },
+        "phase2": {
+          "profitTarget": "5%",
+          "maxDailyLoss": "5%",
+          "maxTotalLoss": "10%",
+          "tradingPeriod": "60 days",
+          "minTradingDays": "4"
+        },
+        "leverage": "1:100"
+      }
+    },
+    {
+      "id": "the5ers-5k-1step",
+      "firmId": "the5ers",
+      "firmName": "The5ers",
+      "amount": "5K",
+      "phase": 1,
+      "title": "The5ers 5K - 1 Phase",
+      "description": "Aggressive scaling program with $5,000 starting capital. Unique profit-sharing model.",
+      "image": "/products/the5ers-5k.jpg",
+      "originalPrice": 189,
+      "discountedPrice": 59,
+      "discount": 69,
+      "popular": false,
+      "featured": false,
+      "rules": {
+        "profitTarget": "6%",
+        "maxDailyLoss": "4%",
+        "maxTotalLoss": "6%",
+        "tradingPeriod": "Unlimited",
+        "minTradingDays": "6",
+        "leverage": "1:100"
+      }
+    }
+  ]
+} 

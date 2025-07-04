@@ -217,7 +217,7 @@ export class UserController {
   ): Promise<void> {
     try {
       const { name, phone } = req.body;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -262,7 +262,7 @@ export class UserController {
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -339,7 +339,7 @@ export class UserController {
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId)
         .populate({
@@ -348,7 +348,7 @@ export class UserController {
         })
         .populate({
           path: "cart.variant",
-          select: "name price sku",
+          select: "name comparePrice sku",
         });
 
       if (!user) {
@@ -380,7 +380,7 @@ export class UserController {
   ): Promise<void> {
     try {
       const { productId, variantId, quantity } = req.body;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -413,11 +413,22 @@ export class UserController {
 
       await user.save();
 
+      // Populate the cart data before returning
+      const populatedUser = await User.findById(userId)
+        .populate({
+          path: "cart.product",
+          select: "name images",
+        })
+        .populate({
+          path: "cart.variant",
+          select: "name comparePrice sku",
+        });
+
       res.status(200).json({
         success: true,
         message: "Item added to cart successfully",
         data: {
-          cart: user.cart,
+          cart: populatedUser?.cart || [],
         },
       });
     } catch (error) {
@@ -435,7 +446,7 @@ export class UserController {
   ): Promise<void> {
     try {
       const { productId, variantId, quantity } = req.body;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -471,11 +482,22 @@ export class UserController {
 
       await user.save();
 
+      // Populate the cart data before returning
+      const populatedUser = await User.findById(userId)
+        .populate({
+          path: "cart.product",
+          select: "name images",
+        })
+        .populate({
+          path: "cart.variant",
+          select: "name comparePrice sku",
+        });
+
       res.status(200).json({
         success: true,
         message: "Cart updated successfully",
         data: {
-          cart: user.cart,
+          cart: populatedUser?.cart || [],
         },
       });
     } catch (error) {
@@ -493,7 +515,7 @@ export class UserController {
   ): Promise<void> {
     try {
       const { productId, variantId } = req.body;
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -522,11 +544,22 @@ export class UserController {
       user.cart.splice(itemIndex, 1);
       await user.save();
 
+      // Populate the cart data before returning
+      const populatedUser = await User.findById(userId)
+        .populate({
+          path: "cart.product",
+          select: "name images",
+        })
+        .populate({
+          path: "cart.variant",
+          select: "name comparePrice sku",
+        });
+
       res.status(200).json({
         success: true,
         message: "Item removed from cart successfully",
         data: {
-          cart: user.cart,
+          cart: populatedUser?.cart || [],
         },
       });
     } catch (error) {
@@ -543,7 +576,7 @@ export class UserController {
     res: Response
   ): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user?._id;
 
       const user = await User.findById(userId);
 
@@ -562,7 +595,7 @@ export class UserController {
         success: true,
         message: "Cart cleared successfully",
         data: {
-          cart: user.cart,
+          cart: [],
         },
       });
     } catch (error) {
