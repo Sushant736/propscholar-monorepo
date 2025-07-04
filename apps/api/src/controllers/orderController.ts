@@ -543,6 +543,99 @@ export class OrderController {
   }
 
   /**
+   * Admin: Get all orders with filters
+   * Query params:
+   *   - page: number
+   *   - limit: number
+   *   - orderNumber: string (partial or full match)
+   *   - customerName: string (partial, case-insensitive)
+   *   - customerEmail: string (partial, case-insensitive)
+   *   - status: string (exact match)
+   */
+  public static async adminGetAllOrders(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        orderNumber,
+        customerName,
+        customerEmail,
+        status,
+      } = req.query;
+      const skip = (Number(page) - 1) * Number(limit);
+
+      // Build filter
+      const filter: any = {};
+      if (orderNumber) {
+        filter.orderNumber = { $regex: orderNumber, $options: "i" };
+      }
+      if (status) {
+        filter.status = status;
+      }
+
+      // Find user IDs matching customerName/email if needed
+      if (customerName || customerEmail) {
+        const userFilter: any = {};
+        if (customerName)
+          userFilter.name = { $regex: customerName, $options: "i" };
+        if (customerEmail)
+          userFilter.email = { $regex: customerEmail, $options: "i" };
+        const users = await User.find(userFilter).select("_id");
+        const userIds = users.map((u) => u._id);
+        if (userIds.length === 0) {
+          // No users match, so no orders will match
+          res.status(200).json({
+            success: true,
+            data: {
+              orders: [],
+              pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total: 0,
+                pages: 0,
+              },
+            },
+          });
+          return;
+        }
+        filter.user = { $in: userIds };
+      }
+
+      const orders = await Order.find(filter)
+        .populate("items.product", "name images")
+        .populate("items.variant", "name sku")
+        .populate("user", "name email phone")
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 });
+
+      const total = await Order.countDocuments(filter);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          orders,
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
+      });
+    } catch (error) {
+      logger.error("Get all orders error", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
    * Get order by ID
    */
   public static async getOrderById(
@@ -755,6 +848,228 @@ export class OrderController {
       });
     } catch (error) {
       logger.error("Update order status error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Admin: Get analytics for dashboard
+   * Returns: total orders, completed, pending, cancelled, total revenue, revenue this month, revenue growth %, top products, top customers, monthly order volume, average order value, new vs returning customers, orders by weekday, most popular payment method
+   */
+  public static async getAdminAnalytics(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      // Basic counts
+      const [totalOrders, completedOrders, pendingOrders, cancelledOrders] =
+        await Promise.all([
+          Order.countDocuments(),
+          Order.countDocuments({ status: "completed" }),
+          Order.countDocuments({ status: "pending" }),
+          Order.countDocuments({ status: "cancelled" }),
+        ]);
+
+      // Revenue (all time, this month)
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const [totalRevenueAgg, monthRevenueAgg, lastMonthRevenueAgg] =
+        await Promise.all([
+          Order.aggregate([
+            { $match: { status: "completed" } },
+            { $group: { _id: null, total: { $sum: "$pricing.total" } } },
+          ]),
+          Order.aggregate([
+            {
+              $match: {
+                status: "completed",
+                createdAt: { $gte: startOfMonth },
+              },
+            },
+            { $group: { _id: null, total: { $sum: "$pricing.total" } } },
+          ]),
+          Order.aggregate([
+            {
+              $match: {
+                status: "completed",
+                createdAt: {
+                  $gte: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+                  $lt: startOfMonth,
+                },
+              },
+            },
+            { $group: { _id: null, total: { $sum: "$pricing.total" } } },
+          ]),
+        ]);
+      const totalRevenue = totalRevenueAgg[0]?.total || 0;
+      const monthRevenue = monthRevenueAgg[0]?.total || 0;
+      const lastMonthRevenue = lastMonthRevenueAgg[0]?.total || 0;
+      const revenueGrowth =
+        lastMonthRevenue > 0
+          ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
+          : null;
+
+      // Average order value
+      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      // Top products (by sales count)
+      const topProducts = await Order.aggregate([
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.product",
+            count: { $sum: "$items.quantity" },
+            revenue: { $sum: "$items.totalPrice" },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+        {
+          $lookup: {
+            from: "products",
+            localField: "_id",
+            foreignField: "_id",
+            as: "product",
+          },
+        },
+        { $unwind: "$product" },
+        {
+          $project: {
+            _id: 0,
+            productId: "$product._id",
+            name: "$product.name",
+            count: 1,
+            revenue: 1,
+          },
+        },
+      ]);
+
+      // Top customers (by order count)
+      const topCustomers = await Order.aggregate([
+        {
+          $group: {
+            _id: "$user",
+            count: { $sum: 1 },
+            revenue: { $sum: "$pricing.total" },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        { $unwind: "$user" },
+        {
+          $project: {
+            _id: 0,
+            userId: "$user._id",
+            name: "$user.name",
+            email: "$user.email",
+            count: 1,
+            revenue: 1,
+          },
+        },
+      ]);
+
+      // Order volume by month (last 12 months)
+      const twelveMonthsAgo = new Date(
+        now.getFullYear(),
+        now.getMonth() - 11,
+        1
+      );
+      const monthlyOrders = await Order.aggregate([
+        { $match: { createdAt: { $gte: twelveMonthsAgo } } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            count: { $sum: 1 },
+            revenue: { $sum: "$pricing.total" },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+      ]);
+
+      // New vs Returning Customers
+      // New: first order in last 30 days, Returning: had order before last 30 days
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const newCustomersAgg = await Order.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        { $group: { _id: "$user" } },
+      ]);
+      const allCustomersAgg = await Order.aggregate([
+        { $group: { _id: "$user" } },
+      ]);
+      const newCustomers = newCustomersAgg.length;
+      const totalCustomers = allCustomersAgg.length;
+      const returningCustomers = totalCustomers - newCustomers;
+      const newCustomerPct =
+        totalCustomers > 0 ? (newCustomers / totalCustomers) * 100 : 0;
+
+      // Orders by weekday
+      const ordersByWeekday = await Order.aggregate([
+        { $group: { _id: { $dayOfWeek: "$createdAt" }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]);
+      // Map weekday numbers to names (1=Sunday, 7=Saturday)
+      const weekdayNames = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
+      const ordersByWeekdayNamed = ordersByWeekday.map((d) => ({
+        weekday: weekdayNames[(d._id - 1) % 7],
+        count: d.count,
+      }));
+
+      // Most popular payment method
+      const paymentMethodAgg = await Order.aggregate([
+        {
+          $group: { _id: "$paymentDetails.paymentMethod", count: { $sum: 1 } },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 1 },
+      ]);
+      const mostPopularPaymentMethod = paymentMethodAgg[0]?._id || null;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          totalOrders,
+          completedOrders,
+          pendingOrders,
+          cancelledOrders,
+          totalRevenue,
+          monthRevenue,
+          lastMonthRevenue,
+          revenueGrowth,
+          avgOrderValue,
+          topProducts,
+          topCustomers,
+          monthlyOrders,
+          newCustomers,
+          returningCustomers,
+          newCustomerPct,
+          ordersByWeekday: ordersByWeekdayNamed,
+          mostPopularPaymentMethod,
+        },
+      });
+    } catch (error) {
+      logger.error("Get admin analytics error:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",

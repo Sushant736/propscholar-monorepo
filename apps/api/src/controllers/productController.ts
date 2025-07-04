@@ -92,7 +92,7 @@ export class ProductController {
 
       const products = await Product.find(filter)
         .populate("category", "name")
-        .populate("variants", "name price sku stock")
+        .populate("variants")
         .skip(skip)
         .limit(Number(limit))
         .sort(sort);
