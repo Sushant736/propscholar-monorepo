@@ -295,6 +295,45 @@ export class UserController {
     }
   }
 
+  public static async getAll(req: Request, res: Response): Promise<void> {
+    try {
+      const { page = 1, limit = 10, search = "" } = req.query;
+      const skip = (Number(page) - 1) * Number(limit);
+
+      const filter: any = {};
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const users = await User.find(filter)
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 });
+
+      const total = await User.countDocuments(filter);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          users,
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            pages: Math.ceil(total / Number(limit)),
+          },
+        },
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+
   public static async getCart(
     req: AuthenticatedRequest,
     res: Response
@@ -532,6 +571,46 @@ export class UserController {
         success: false,
         message: "Internal server error",
       });
+    }
+  }
+
+  public static async updateUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { name, email, phone, isEmailVerified } = req.body;
+      const user = await User.findById(id);
+      if (!user) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+      if (name !== undefined) user.name = name;
+      if (email !== undefined) user.email = email;
+      if (phone !== undefined) user.phone = phone;
+      if (isEmailVerified !== undefined) user.isEmailVerified = isEmailVerified;
+      await user.save();
+      res
+        .status(200)
+        .json({ success: true, message: "User updated", data: { user } });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+
+  public static async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const user = await User.findByIdAndDelete(id);
+      if (!user) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+      res.status(200).json({ success: true, message: "User deleted" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   }
 }
