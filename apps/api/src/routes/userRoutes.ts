@@ -21,6 +21,11 @@ router.delete("/:id", UserController.deleteUser);
 router.get("/profile", authenticate, UserController.getProfile);
 router.put("/profile", authenticate, UserController.updateProfile);
 
+//Add user (admin)
+router.post("/", UserController.adminAddUser);
+router.put("/:id", UserController.adminUpdateUser);
+router.delete("/:id", UserController.adminDeleteUser);
+
 // Cart routes
 router.get("/cart", authenticate, UserController.getCart);
 router.post("/cart/add", authenticate, UserController.addToCart);

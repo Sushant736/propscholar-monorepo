@@ -646,4 +646,62 @@ export class UserController {
         .json({ success: false, message: "Internal server error" });
     }
   }
+
+  //Admin routes
+  public static async adminAddUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { name, email, phone, isEmailVerified } = req.body;
+      const user = new User({ name, email, phone, isEmailVerified });
+      await user.save();
+      res.status(200).json({ success: true, message: "User added" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+
+  public static async adminUpdateUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { name, email, phone, isEmailVerified } = req.body;
+      const user = await User.findByIdAndUpdate(id, {
+        name,
+        email,
+        phone,
+        isEmailVerified,
+      });
+      if (!user) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+      res.status(200).json({ success: true, message: "User updated" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+
+  public static async adminDeleteUser(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const user = await User.findByIdAndDelete(id);
+      if (!user) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+      res.status(200).json({ success: true, message: "User deleted" });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
 }

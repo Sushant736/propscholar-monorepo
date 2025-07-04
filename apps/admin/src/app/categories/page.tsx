@@ -163,48 +163,22 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Header */}
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center justify-between">
+      <div className='card'>
+        <div className='card-header'>
+          <div className='flex items-center justify-between'>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className='text-2xl font-bold text-gray-900'>Categories</h1>
+              <p className='text-gray-600 mt-1'>
                 Manage product categories and organization
               </p>
             </div>
             <Button
-              className="btn-primary flex items-center space-x-2"
-              onClick={openAddModal}
-            >
-              <Plus className="h-4 w-4" />
+              className='btn-primary flex items-center space-x-2'
+              onClick={openAddModal}>
+              <Plus className='h-4 w-4' />
               <span>Add Category</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="card">
-        <div className="card-body">
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search categories..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className="search-input"
-              />
-            </div>
-            <Button
-              variant="outline"
-              className="btn-secondary flex items-center space-x-2"
-            >
-              <Filter className="h-4 w-4" />
-              <span>Filters</span>
             </Button>
           </div>
         </div>
@@ -212,101 +186,91 @@ export default function CategoriesPage() {
 
       {/* Loading/Error/Empty States */}
       {loading && (
-        <div className="empty-state">
-          <Loader2 className="empty-state-icon animate-spin" />
-          <p className="empty-state-text">Loading categories...</p>
+        <div className='empty-state'>
+          <Loader2 className='empty-state-icon animate-spin' />
+          <p className='empty-state-text'>Loading categories...</p>
         </div>
       )}
       {error && (
-        <div className="empty-state">
-          <div className="empty-state-icon text-red-500">⚠️</div>
-          <p className="empty-state-text text-red-600">{error}</p>
+        <div className='empty-state'>
+          <div className='empty-state-icon text-red-500'>⚠️</div>
+          <p className='empty-state-text text-red-600'>{error}</p>
         </div>
       )}
       {!loading && !error && categories.length === 0 && (
-        <div className="empty-state">
-          <Folder className="empty-state-icon" />
-          <p className="empty-state-text">No categories found.</p>
+        <div className='empty-state'>
+          <Folder className='empty-state-icon' />
+          <p className='empty-state-text'>No categories found.</p>
         </div>
       )}
 
       {/* Categories Table */}
       {!loading && !error && categories.length > 0 && (
-        <div className="table-container">
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead className="table-header">
+        <div className='table-container'>
+          <div className='overflow-x-auto'>
+            <table className='table'>
+              <thead className='table-header'>
                 <tr>
                   <th>Category</th>
                   <th>Description</th>
                   <th>Products</th>
                   <th>Status</th>
                   <th>Created</th>
-                  <th className="text-right">Actions</th>
+                  <th className='text-right'>Actions</th>
                 </tr>
               </thead>
-              <tbody className="table-body">
+              <tbody className='table-body'>
                 {categories.map((category) => (
-                  <tr key={category._id} className="table-row">
-                    <td className="table-cell">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200">
-                          {category.image ? (
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              className="h-10 w-10 rounded-lg object-cover"
-                            />
-                          ) : (
-                            <Folder className="h-5 w-5 text-gray-500" />
-                          )}
+                  <tr key={category._id} className='table-row'>
+                    <td className='table-cell'>
+                      <div className='flex items-center'>
+                        <div className='h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-200'>
+                          <Folder className='h-5 w-5 text-gray-500' />
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-semibold text-gray-900">
+                        <div className='ml-4'>
+                          <div className='text-sm font-semibold text-gray-900'>
                             {category.name}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell">
-                      <div className="text-sm text-gray-700 max-w-xs truncate">
+                    <td className='table-cell'>
+                      <div className='text-sm text-gray-700 max-w-xs truncate'>
                         {category.description || "-"}
                       </div>
                     </td>
-                    <td className="table-cell">
-                      <span className="badge-info">
+                    <td className='table-cell'>
+                      <span className='badge-info'>
                         {category.products?.length || 0} products
                       </span>
                     </td>
-                    <td className="table-cell">
+                    <td className='table-cell'>
                       {category.isActive ? (
-                        <span className="badge-success">Active</span>
+                        <span className='badge-success'>Active</span>
                       ) : (
-                        <span className="badge-neutral">Inactive</span>
+                        <span className='badge-neutral'>Inactive</span>
                       )}
                     </td>
-                    <td className="table-cell text-sm text-gray-700">
+                    <td className='table-cell text-sm text-gray-700'>
                       {category.createdAt
                         ? new Date(category.createdAt).toLocaleDateString()
                         : "-"}
                     </td>
-                    <td className="table-cell text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className='table-cell text-right'>
+                      <div className='flex items-center justify-end space-x-2'>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
-                          onClick={() => openEditModal(category)}
-                        >
-                          <Edit className="h-4 w-4" />
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 hover:bg-blue-50 hover:text-blue-600'
+                          onClick={() => openEditModal(category)}>
+                          <Edit className='h-4 w-4' />
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
-                          onClick={() => setDeleteId(category._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
+                          variant='ghost'
+                          size='icon'
+                          className='h-8 w-8 hover:bg-red-50 hover:text-red-600'
+                          onClick={() => setDeleteId(category._id)}>
+                          <Trash2 className='h-4 w-4' />
                         </Button>
                       </div>
                     </td>
@@ -320,37 +284,35 @@ export default function CategoriesPage() {
 
       {/* Pagination */}
       {!loading && !error && categories.length > 0 && (
-        <div className="pagination-container">
-          <div className="pagination-info">
+        <div className='pagination-container'>
+          <div className='pagination-info'>
             Showing{" "}
-            <span className="font-medium">{(page - 1) * limit + 1}</span> to
-            <span className="font-medium">
+            <span className='font-medium'>{(page - 1) * limit + 1}</span> to
+            <span className='font-medium'>
               {" "}
               {Math.min(page * limit, total)}
             </span>{" "}
             of
-            <span className="font-medium"> {total}</span> results
+            <span className='font-medium'> {total}</span> results
           </div>
-          <div className="pagination-controls">
+          <div className='pagination-controls'>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="btn-secondary"
-            >
+              className='btn-secondary'>
               Previous
             </Button>
-            <span className="text-sm text-gray-700 px-4">
+            <span className='text-sm text-gray-700 px-4'>
               Page {page} of {pages}
             </span>
             <Button
-              variant="outline"
-              size="sm"
+              variant='outline'
+              size='sm'
               disabled={page === pages}
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              className="btn-secondary"
-            >
+              className='btn-secondary'>
               Next
             </Button>
           </div>
@@ -359,94 +321,90 @@ export default function CategoriesPage() {
 
       {/* Add/Edit Modal */}
       {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
+        <div className='modal-overlay' onClick={closeModal}>
+          <div className='modal-content' onClick={(e) => e.stopPropagation()}>
+            <div className='modal-header'>
+              <div className='flex items-center justify-between'>
+                <h2 className='text-lg font-semibold text-gray-900'>
                   {modalMode === "add" ? "Add Category" : "Edit Category"}
                 </h2>
                 <button
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  className='text-gray-400 hover:text-gray-600 transition-colors duration-200'
                   onClick={closeModal}
-                  disabled={formLoading}
-                >
-                  <X className="h-5 w-5" />
+                  disabled={formLoading}>
+                  <X className='h-5 w-5' />
                 </button>
               </div>
             </div>
-            <div className="modal-body">
-              <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className='modal-body'>
+              <form onSubmit={handleFormSubmit} className='space-y-4'>
                 <div>
-                  <label className="form-label">Name</label>
+                  <label className='form-label'>Name</label>
                   <input
-                    name="name"
+                    name='name'
                     value={form.name || ""}
                     onChange={handleFormChange}
-                    className="form-input"
+                    className='form-input'
                     required
                     disabled={formLoading}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Description</label>
+                  <label className='form-label'>Description</label>
                   <textarea
-                    name="description"
+                    name='description'
                     value={form.description || ""}
                     onChange={handleFormChange}
-                    className="form-textarea"
+                    className='form-textarea'
                     rows={3}
                     disabled={formLoading}
                   />
                 </div>
                 <div>
-                  <label className="form-label">Image URL</label>
+                  <label className='form-label'>Image URL</label>
                   <input
-                    name="image"
+                    name='image'
                     value={form.image || ""}
                     onChange={handleFormChange}
-                    className="form-input"
+                    className='form-input'
                     disabled={formLoading}
                   />
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className='flex items-center space-x-2'>
                   <input
-                    name="isActive"
-                    type="checkbox"
+                    name='isActive'
+                    type='checkbox'
                     checked={!!form.isActive}
                     onChange={handleFormChange}
                     disabled={formLoading}
-                    id="isActive"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    id='isActive'
+                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
                   />
                   <label
-                    htmlFor="isActive"
-                    className="text-sm font-medium text-gray-700"
-                  >
+                    htmlFor='isActive'
+                    className='text-sm font-medium text-gray-700'>
                     Active
                   </label>
                 </div>
               </form>
             </div>
-            <div className="modal-footer">
-              <div className="flex justify-end space-x-3">
+            <div className='modal-footer'>
+              <div className='flex justify-end space-x-3'>
                 <Button
-                  type="button"
-                  variant="outline"
+                  type='button'
+                  variant='outline'
                   onClick={closeModal}
                   disabled={formLoading}
-                  className="btn-secondary"
-                >
+                  className='btn-secondary'>
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
+                  type='submit'
                   onClick={handleFormSubmit}
                   disabled={formLoading}
-                  className="btn-primary"
-                >
+                  className='btn-primary'>
                   {formLoading && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   )}
                   {modalMode === "add" ? "Add Category" : "Save Changes"}
                 </Button>
@@ -458,37 +416,35 @@ export default function CategoriesPage() {
 
       {/* Delete Confirmation */}
       {deleteId && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2 className="text-lg font-semibold text-gray-900">
+        <div className='modal-overlay'>
+          <div className='modal-content'>
+            <div className='modal-header'>
+              <h2 className='text-lg font-semibold text-gray-900'>
                 Delete Category
               </h2>
             </div>
-            <div className="modal-body">
-              <p className="text-gray-700">
+            <div className='modal-body'>
+              <p className='text-gray-700'>
                 Are you sure you want to delete this category? This action
                 cannot be undone.
               </p>
             </div>
-            <div className="modal-footer">
-              <div className="flex justify-end space-x-3">
+            <div className='modal-footer'>
+              <div className='flex justify-end space-x-3'>
                 <Button
-                  variant="outline"
+                  variant='outline'
                   onClick={() => setDeleteId(null)}
                   disabled={deleteLoading}
-                  className="btn-secondary"
-                >
+                  className='btn-secondary'>
                   Cancel
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant='destructive'
                   onClick={handleDelete}
                   disabled={deleteLoading}
-                  className="btn-danger"
-                >
+                  className='btn-danger'>
                   {deleteLoading && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   )}
                   Delete
                 </Button>

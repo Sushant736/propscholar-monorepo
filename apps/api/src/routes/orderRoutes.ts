@@ -5,6 +5,19 @@ import { generalLimiter } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
+// Admin routes (you can add admin middleware later)
+router.patch("/:id/status", generalLimiter, OrderController.updateStatus);
+
+// Admin non-auth route for fetching all orders
+router.get("/admin", generalLimiter, OrderController.adminGetAllOrders);
+
+// Admin analytics route (no auth for now)
+router.get(
+  "/admin-analytics",
+  generalLimiter,
+  OrderController.getAdminAnalytics
+);
+
 // Protected routes (user orders)
 router.get("/", authenticate, generalLimiter, OrderController.getAll);
 router.get(
@@ -34,8 +47,5 @@ router.post(
   generalLimiter,
   OrderController.handlePaymentCallback
 );
-
-// Admin routes (you can add admin middleware later)
-router.patch("/:id/status", generalLimiter, OrderController.updateStatus);
 
 export default router;
